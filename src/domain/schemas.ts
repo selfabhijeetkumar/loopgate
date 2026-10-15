@@ -60,6 +60,7 @@ export const ItemSchema = z.object({
   hazardProbability: z.number().min(0).max(1),
   overallConfidence: z.number().min(0).max(1),
   gateScore: z.number().min(0).max(1),
+  modelDisagreement: z.number().min(0).max(1).optional(),
   status: ItemStatusSchema,
   assignedRoute: RouteIdSchema,
   provenance: ProvenanceSchema,
@@ -79,6 +80,7 @@ export const AssumptionSchema = z.object({
 export const EngineConfigSchema = z.object({
   threshold: z.number().min(0).max(1),
   safetyFloor: z.number().min(0).max(1),
+  hazardConfidentCutoff: z.number().min(0).max(1).optional(),
   assumptions: z.array(AssumptionSchema),
 });
 

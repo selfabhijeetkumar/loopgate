@@ -36,10 +36,12 @@ export const DEFAULT_ASSUMPTIONS: Assumption[] = [
 ];
 
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
-  threshold: 0.40,
-  safetyFloor: 0.25,
+  threshold: 0.50,
+  safetyFloor: 0.30,
+  hazardConfidentCutoff: 0.75,
   assumptions: DEFAULT_ASSUMPTIONS,
 };
+
 
 export const SYNTHETIC_SCENARIO_ITEMS: Item[] = [
   {
@@ -130,7 +132,7 @@ export const SYNTHETIC_SCENARIO_ITEMS: Item[] = [
         box: { x: 0.25, y: 0.20, width: 0.50, height: 0.60 },
         label: 'electronic_peripheral',
         materialClass: 'reusable',
-        hazardProbability: 0.38,
+        hazardProbability: 0.14,
         confidence: 0.78,
         source: 'synthetic-owlv2',
         provenance: 'Simulated',
@@ -140,21 +142,21 @@ export const SYNTHETIC_SCENARIO_ITEMS: Item[] = [
         box: { x: 0.40, y: 0.45, width: 0.25, height: 0.30 },
         label: 'battery_compartment_detected',
         materialClass: 'hazardous',
-        hazardProbability: 0.62,
+        hazardProbability: 0.42,
         confidence: 0.68,
         source: 'synthetic-clip',
         provenance: 'Simulated',
       },
     ],
     primaryClass: 'reusable',
-    hazardProbability: 0.50,
+    hazardProbability: 0.28, // Below safetyFloor=0.30; gate score ~0.27 → activates slider
     overallConfidence: 0.73,
-    gateScore: 0.58,
+    gateScore: 0.27,
     status: 'diverted',
     assignedRoute: 'inspection_line',
     provenance: 'Simulated',
     createdAt: '2026-10-15T09:00:12.000Z',
-    notes: 'Intact peripheral with likely alkaline or NiMH AA battery inside.',
+    notes: 'Peripheral with possible alkaline battery compartment. Below safety floor but uncertain -- slider-sensitive item.',
   },
   {
     id: 'item-05',

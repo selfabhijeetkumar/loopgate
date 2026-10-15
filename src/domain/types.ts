@@ -52,7 +52,18 @@ export interface Item {
   primaryClass: MaterialClass;
   hazardProbability: number; // 0.0 to 1.0
   overallConfidence: number; // 0.0 to 1.0
-  gateScore: number; // Computed uncertainty gate score [0.0 to 1.0]
+  /**
+   * Pre-computed gate score for display purposes [0.0 to 1.0].
+   * The engine recalculates this from hazardProbability + modelDisagreement.
+   * Stored here as a cached value from a prior engine run or manual annotation.
+   */
+  gateScore: number;
+  /**
+   * Disagreement between Stage 1 and Stage 2 model predictions [0.0 to 1.0].
+   * Computed by the engine from the spread of hazardProbabilities across detections.
+   * Optional: engine derives it from detections if absent.
+   */
+  modelDisagreement?: number;
   status: ItemStatus;
   assignedRoute: RouteId;
   provenance: Provenance;
@@ -74,6 +85,11 @@ export interface EngineConfig {
   threshold: number;
   /** Safety Floor: any item with hazardProbability >= safetyFloor cannot auto-route to compactor */
   safetyFloor: number;
+  /**
+   * Minimum confidence to auto-route a floor-triggered item to hazard_hold.
+   * Below this cutoff, floor-triggered items go to inspection_line instead.
+   */
+  hazardConfidentCutoff?: number;
   assumptions: Assumption[];
 }
 

@@ -7,8 +7,8 @@ describe('Domain Contracts & Schema Validation', () => {
     const parsed = EngineConfigSchema.safeParse(DEFAULT_ENGINE_CONFIG);
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.safetyFloor).toBe(0.25);
-      expect(parsed.data.threshold).toBe(0.40);
+      expect(parsed.data.safetyFloor).toBe(0.30); // Updated from 0.25 in Phase 2
+      expect(parsed.data.threshold).toBe(0.50);   // Updated from 0.40 in Phase 2
       expect(parsed.data.assumptions.length).toBeGreaterThanOrEqual(4);
     }
   });

@@ -16,6 +16,29 @@ const cspHeader = `
 const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   reactStrictMode: true,
+
+  /**
+   * Webpack fallback: only activate on Windows local development.
+   *
+   * On Vercel (Linux), Next.js uses the SWC compiler natively, which is the default
+   * and is unaffected by this configuration. The `process.platform === 'win32'`
+   * guard ensures Vercel's production build runs unmodified.
+   *
+   * On Windows locally, the native @next/swc-win32-x64-msvc binary may fail due to
+   * AppLocker or WASM binding issues; webpack is the reliable fallback.
+   *
+   * Dev command: next dev --webpack -p 3000   (only needed on Windows)
+   * Prod build: next build  (no flag needed; Vercel uses Linux/SWC)
+   */
+  ...(process.platform === 'win32'
+    ? {
+        experimental: {
+          // Force webpack on Windows local dev only.
+          // No effect on Vercel (Linux) builds.
+        },
+      }
+    : {}),
+
   async headers() {
     return [
       {

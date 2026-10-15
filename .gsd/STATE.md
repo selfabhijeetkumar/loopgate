@@ -1,49 +1,67 @@
 # STATE.md -- Loopgate Project State
 <!-- GSD Session Memory -->
-<!-- Updated: 2026-10-15 (Phase 1 In Progress) -->
+<!-- Updated: 2026-10-15 (Phase 2 COMPLETE) -->
 
 ## Current Position
-Phase: 1 (COMPLETED)
-Next phase: 2 -- Deterministic Engine + Tests
-Status: AWAITING USER REVIEW BEFORE PHASE 2
+Phase: 2 (COMPLETE)
+Next phase: 3 -- CV Pipeline + Gemini Integration
+Status: AWAITING USER REVIEW BEFORE PHASE 3
 
-## Phase 1 Execution & Verification Summary
-Objective: Scaffold Next.js App Router project, implement Industrial HUD design system, establish pure domain contracts & Zod schemas, build accessible app shell (Home + custom 404), and pass full verification gate.
+## Phase 2 Execution & Verification Summary
+Objective: Implement the deterministic sorting engine, digital twin timeline, branch comparison/sweep, comprehensive test suite, and a dev sandbox page. All invariants enforced and empirically verified.
 
 ### Completed Deliverables
-1. **Next.js 16 App Router Scaffold & Config**:
-   - Next.js 16.4.1 + React 19 + TypeScript + Tailwind CSS configured.
-   - Webpack fallback configured in `next.config.ts` for Windows WASM compatibility.
-   - Hardened Content Security Policy (CSP), permissions policy, X-Frame-Options: DENY, and Hugging Face CDN allowlisted in connect-src.
-   - Environment variables standardized (`.env.example` with sanitized `GEMINI_MODEL=gemini-2.5-flash`).
-2. **Industrial HUD Design System**:
-   - `src/app/globals.css`: Dark graphite `#0d0f11` default with light companion, strict single signal amber `#f59e0b` reserved for alerts/hazards, zero purple gradients or pill buttons.
-   - Typography: Space Grotesk (display) and JetBrains Mono (data) loaded via `next/font/google`.
-   - Accessible Theme Switcher (`src/components/ThemeToggle.tsx`) with zero-flash inline script (`public/theme-init.js`).
-   - Standardized `ProvenanceChip` component (`src/components/ProvenanceChip.tsx`) with 7 distinct provenance tiers ([OBS], [INF], [VER], [CFG], [SIM], [CAL], [GEN]), distinguishable via text labels, glyphs, and border styles without relying on color alone.
-3. **Pure Domain Contracts & Synthetic Scenario**:
-   - `src/domain/types.ts`: Pure TypeScript types for `MaterialClass`, `Provenance`, `BoundingBox`, `Detection`, `RouteId`, `ItemStatus`, `Item`, `EngineConfig`, `SortingLineStage`, `AuditEvent`, `ReplayBranch`. Zero UI/framework dependencies.
-   - `src/domain/schemas.ts`: Strict Zod validation schemas for all domain entities.
-   - `src/data/scenario.ts`: Deterministic 12-item baseline dataset spanning all 4 material classes, labeled `Simulated`, with default engine configuration (`threshold: 0.40`, `safetyFloor: 0.25`).
-4. **App Shell**:
-   - Sticky header with original SVG logo mark, active page links, and responsive mobile drawer.
-   - Accessible skip-to-content anchor.
-   - Footer with dynamic year, provenance registry preview, and HF CDN disclosure.
-   - Home page (`src/app/page.tsx`) with real facility copy, tagline (*"Every item passes the gate. Risky ones never reach the compactor."*), live telemetry HUD, 3-stage CV architecture breakdown, 4 material class matrix, and 12-item synthetic conveyor feed table.
-   - Custom 404 page (`src/app/not-found.tsx` - Routing Fault // 404).
+
+1. **Engine Modules** (`src/engine/`):
+   - `gate.ts` — `evaluateGate()`: safety floor invariant (hazardProbability >= safetyFloor → never reaches compactor), gateScore formula `0.65*hazard + 0.35*uncertainty`, hazard routing with confidence cutoff, inspection threshold routing.
+   - `sort.ts` — `simulateBatch()`: processes Item[] through the gate, produces per-item `ItemDecision[]`, batch `BatchMetrics`, and tick `Timeline` for the digital twin.
+   - `twin.ts` — `buildTwinTimeline()`: extracts and enriches tick events for 3D visualization.
+   - `compare.ts` — `compareBranches()` (baseline vs gated side-by-side metrics + deltas) and `sweepThreshold()` (slider data over full [0,1] range).
+   - `assumptions.ts` — All labeled estimates with provenance (`Configured`) clearly distinguished from measured facts.
+   - `index.ts` — Single barrel export; all outside imports go through here.
+
+2. **Domain Updates**:
+   - `src/domain/types.ts`: Added `modelDisagreement?: number` to `Item`; added `hazardConfidentCutoff` to `EngineConfig`.
+   - `src/domain/schemas.ts`: Zod schemas updated to match.
+   - `src/data/scenario.ts`: `DEFAULT_ENGINE_CONFIG` updated to `safetyFloor: 0.30`, `hazardConfidentCutoff: 0.75`. Scenario items updated with `modelDisagreement` fields to produce distinct gate score distribution across slider range.
+
+3. **Dev Sandbox** (`src/app/dev/engine/page.tsx`):
+   - Live threshold slider (0.00–1.00, step 0.01) with real-time inspection load update.
+   - Branch comparison table (baseline vs gated metrics + deltas).
+   - Full sweep table (all threshold points).
+   - Per-item audit trail with gateScore, route, safetyFloor flag.
+   - Assumption registry (all engine assumptions with provenance).
+   - `src/app/dev/layout.tsx`: Calls `notFound()` in production — route is completely hidden on Vercel.
+
+4. **Home Page Wired to Engine**:
+   - `src/app/page.tsx`: Telemetry bar and conveyor feed table now show live `simulateBatch()` results.
+   - `ProvenanceChip` shows `[CAL]` for all engine-computed values.
+   - Terminology: "Physical-Digital Twin" → "Digital Twin" throughout.
+
+5. **Next.js Config**:
+   - `next.config.ts`: Webpack fallback is now platform-conditional (`process.platform === 'win32'`) — Vercel Linux build runs clean SWC unaffected.
+
+6. **Test Suite** (`src/__tests__/engine.test.ts`):
+   - 29 engine tests covering: safety floor invariant, conservation (every item in exactly one terminal), gate score formula, threshold boundary behaviour, batch metrics accuracy, sweepThreshold monotonicity, compareBranches delta sign, twin timeline tick count, assumption provenance labels.
 
 ### Empirical Verification Results
-- **TypeScript**: `npm run typecheck` passed (0 errors).
-- **ESLint**: `npm run lint` passed (0 warnings/errors).
-- **Vitest Unit Tests**: `npm run test` passed (4/4 tests passed in `src/__tests__/domain.test.ts`).
-- **Production Build**: `npm run build` passed (static generation of `/`, `/_not-found`, `/icon.svg`).
-- **NPM Audit**: `npm audit` returned 0 vulnerabilities.
-- **Browser Subagent Walkthrough**: Verified responsive rendering at 360px (zero horizontal scroll), 768px tablet, 1280px desktop, keyboard Tab navigation with amber focus rings, and custom 404 routing. Recording: `loopgate_phase1_verification_1792044629554.webp`.
-- **Secret Scan**: Verified `.env.example` is fully sanitized, no API keys or secrets in workspace.
+- **TypeScript**: `npm run typecheck` ✅ 0 errors
+- **ESLint**: `npm run lint` ✅ 0 warnings/errors
+- **Vitest**: `npm run test` ✅ **33/33 tests pass** (4 domain + 29 engine)
+- **Production Build**: `npm run build` ✅ exit 0 — routes: `/`, `/_not-found`, `/dev/engine`, `/icon.svg`
+- **Gate Semantics**: Safety floor invariant confirmed — no floor-triggered item ever reaches compactor stream in any test case.
 
-## Next Actions for Phase 2
-1. User review and approval of Phase 1 report.
-2. Implement deterministic sorting engine in `src/engine/sort.ts`.
-3. Implement gate score & safety floor calculations in `src/engine/gate.ts`.
-4. Implement digital twin state machine and audit event logging in `src/engine/twin.ts`.
-5. Comprehensive Vitest unit test suite covering safety floor, edge cases, and replay branches.
+## Phase 1 Summary (Archived)
+All Phase 1 deliverables complete and verified. See git log for details.
+- Next.js 16 App Router scaffold + Industrial HUD design system
+- Domain contracts (types.ts, schemas.ts), synthetic scenario (scenario.ts)
+- App shell (Header, ThemeToggle, ProvenanceChip, Home, 404)
+- Browser-verified responsive layout, keyboard navigation, provenance chip rendering
+
+## Next Actions for Phase 3
+1. User review and approval of Phase 2 report.
+2. Implement CV pipeline: image upload → COCO-SSD object detection (TF.js, runs in browser, zero server cost).
+3. Map COCO-SSD classes → `MaterialClass` using deterministic lookup table.
+4. Integrate Gemini (optional, cached by image hash, deterministic fallback always available).
+5. Wire CV output into engine: detected items → `simulateBatch()` → live UI update.
+6. Update `src/data/scenario.ts` to accept real CV items alongside synthetic baseline.
