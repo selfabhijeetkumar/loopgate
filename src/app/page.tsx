@@ -48,7 +48,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2 border-b border-border-subtle pb-2">
               <span className="w-2 h-2 bg-amber-500 rounded-none animate-pulse" />
               <span className="text-[11px] font-mono uppercase tracking-widest text-text-secondary">
-                FACILITY-01 // PS-06 SENTINEL // CHAPTER 00
+                FACILITY-01 // PS-06 SENTINEL // CORE MANIFEST
               </span>
             </div>
 
@@ -130,7 +130,7 @@ export default function HomePage() {
             <div className="md:col-span-6 bg-[#090c10]/92 border border-border-subtle p-6 rounded-[2px] shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                 <span className="text-xs font-mono font-bold text-text-primary">
-                  CHAPTER 01 // PER-ITEM VISION SCAN
+                  STAGE 01 // PER-ITEM VISION SCAN
                 </span>
                 <ProvenanceChip provenance="Model-inferred" />
               </div>
@@ -160,7 +160,7 @@ export default function HomePage() {
             <div className="md:col-start-7 md:col-span-6 bg-[#090c10]/92 border border-border-subtle p-6 rounded-[2px] shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                 <span className="text-xs font-mono font-bold text-amber-400">
-                  CHAPTER 02 // UNCERTAINTY GATE
+                  STAGE 02 // UNCERTAINTY GATE
                 </span>
                 <ProvenanceChip provenance="Calculated" />
               </div>
@@ -194,7 +194,7 @@ export default function HomePage() {
             <div className="md:col-span-6 bg-[#090c10]/92 border border-border-subtle p-6 rounded-[2px] shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                 <span className="text-xs font-mono font-bold text-text-primary">
-                  CHAPTER 03 // SIMULATED DIVERTER AND ROUTING
+                  STAGE 03 // SIMULATED DIVERTER AND ROUTING
                 </span>
                 <ProvenanceChip provenance="Calculated" />
               </div>
@@ -228,7 +228,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-4 bg-[#090c10]/80 p-4 rounded-[2px] border">
               <div className="space-y-1">
                 <div className="text-xs font-mono uppercase tracking-widest text-amber-500">
-                  Interactive Digital Twin // Chapter 04
+                  Sentinel Core // Interactive Digital Twin
                 </div>
                 <h2 id="twin-heading" className="text-2xl sm:text-3xl font-display font-bold text-text-primary">
                   Run It <span className="font-serif-italic font-normal text-amber-400">Yourself</span>
@@ -255,7 +255,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-4 bg-[#090c10]/80 p-4 rounded-[2px] border">
             <div className="space-y-1">
               <div className="text-xs font-mono uppercase tracking-widest text-amber-500">
-                Branch Comparison // Phase 5
+                Gated Policy Replay // Branch Comparison
               </div>
               <h2 id="replay-heading" className="text-2xl sm:text-3xl font-display font-bold text-text-primary">
                 Replay{' '}

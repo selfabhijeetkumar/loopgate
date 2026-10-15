@@ -107,7 +107,7 @@ export function Header() {
             LOOP<span className="text-amber-500">GATE</span>
           </span>
           <span className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest border border-border-subtle text-text-muted rounded-[2px]">
-            HUD v1.0
+            LIVE TELEMETRY
           </span>
         </Link>
 

@@ -2,15 +2,91 @@
  * src/cv/worker.ts
  * Web Worker executing @huggingface/transformers pipelines off the main thread.
  * WebGPU preferred with automatic WASM fallback.
+ *
+ * PHASE 4C DIAGNOSTICS & HARDENING:
+ * 1. securitypolicyviolation listener posts violations to main thread.
+ * 2. Logging wrapper around self.fetch tracks every requested URL, redirect, status, and error.
+ * 3. Local ORT wasm configuration (env.backends.onnx.wasm.wasmPaths = '/ort/') avoids jsdelivr.
+ * 4. Image inputs accept raw pixel ArrayBuffers / Blobs, completely eliminating data: URI fetches.
+ * 5. Explicit dtype: 'fp32' for webgpu, 'q8' for wasm.
  */
 
 import { pipeline, env, RawImage } from '@huggingface/transformers';
-import type { RawBox, RawDetectorResult, NormalizedDetection } from './types';
+import type { RawDetectorResult, NormalizedDetection } from './types';
 import { nonMaxSuppression } from './nms';
 
-// Configuration: Allow remote models from Hugging Face CDN, browser Cache API enabled
+// ---------------------------------------------------------------------------
+// 1. CSP Violation Listener & Fetch Diagnostic Wrapper
+// ---------------------------------------------------------------------------
+
+self.addEventListener('securitypolicyviolation', (e: any) => {
+  const detail = {
+    blockedURI: e.blockedURI || 'unknown',
+    violatedDirective: e.violatedDirective || 'unknown',
+    effectiveDirective: e.effectiveDirective || 'unknown',
+    originalPolicy: e.originalPolicy || 'unknown',
+    disposition: e.disposition || 'enforce',
+    statusCode: e.statusCode || 0,
+  };
+  console.error('[Worker CSP Violation]', detail);
+  self.postMessage({
+    type: 'CSP_VIOLATION',
+    payload: detail,
+  });
+});
+
+const originalFetch = self.fetch.bind(self);
+self.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  const start = performance.now();
+  console.log(`[Worker Fetch] START: ${url}`);
+  try {
+    const response = await originalFetch(input, init);
+    const duration = Math.round(performance.now() - start);
+    console.log(
+      `[Worker Fetch] SUCCESS: ${url} -> status ${response.status} (${duration}ms) [redirected: ${
+        response.redirected ? response.url : 'no'
+      }]`
+    );
+    self.postMessage({
+      type: 'FETCH_EVENT',
+      payload: {
+        url,
+        finalUrl: response.redirected ? response.url : url,
+        status: response.status,
+        duration,
+        ok: response.ok,
+      },
+    });
+    return response;
+  } catch (err: any) {
+    const duration = Math.round(performance.now() - start);
+    console.error(`[Worker Fetch] FAILED: ${url} after ${duration}ms:`, err?.message || err);
+    self.postMessage({
+      type: 'FETCH_ERROR',
+      payload: {
+        url,
+        error: err?.message || String(err),
+        duration,
+      },
+    });
+    throw err;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// 2. Transformers.js & ONNX Runtime Environment Configuration
+// ---------------------------------------------------------------------------
+
 env.allowLocalModels = false;
 env.useBrowserCache = true;
+
+// Configure local ORT WASM paths to avoid external jsdelivr requests
+if (!env.backends) (env as any).backends = {};
+if (!env.backends.onnx) (env as any).backends.onnx = {};
+if (!env.backends.onnx.wasm) (env as any).backends.onnx.wasm = {};
+(env.backends.onnx.wasm as any).wasmPaths = '/ort/';
+(env.backends.onnx.wasm as any).proxy = false;
 
 const DETECTOR_QUERIES = [
   'bottle',
@@ -38,26 +114,20 @@ const CLIP_PROMPTS = [
   'a high risk lithium battery, power bank, or electronic device containing batteries',
 ];
 
-// Pipelines cache
+// Pipeline singletons inside worker scope
 let detectorPipeline: any = null;
 let classifierPipeline: any = null;
 let currentDevice = 'wasm';
 let activeModelName = 'Xenova/owlvit-base-patch32';
+let activeClipName = 'Xenova/clip-vit-base-patch32';
 
-async function initPipelines(preferredDevice: 'webgpu' | 'wasm' = 'webgpu') {
-  // Test WebGPU availability
-  let deviceToUse = preferredDevice;
-  if (preferredDevice === 'webgpu') {
-    if (typeof navigator === 'undefined' || !(navigator as any).gpu) {
-      deviceToUse = 'wasm';
-    }
-  }
-
-  const progressCallback = (p: any) => {
+function createProgressCallback(modelLabel: string) {
+  return (p: any) => {
     self.postMessage({
       type: 'PROGRESS',
       payload: {
         status: p.status || 'progress',
+        task: modelLabel,
         file: p.file,
         progress: p.progress !== undefined ? Math.round(p.progress) : undefined,
         loaded: p.loaded,
@@ -65,26 +135,34 @@ async function initPipelines(preferredDevice: 'webgpu' | 'wasm' = 'webgpu') {
       },
     });
   };
+}
+
+async function initPipelines(preferredDevice: 'webgpu' | 'wasm' = 'webgpu') {
+  let deviceToUse = preferredDevice;
+  if (preferredDevice === 'webgpu') {
+    if (typeof navigator === 'undefined' || !(navigator as any).gpu) {
+      deviceToUse = 'wasm';
+    }
+  }
 
   try {
     if (!detectorPipeline) {
-      self.postMessage({
-        type: 'PROGRESS',
-        payload: { status: 'progress', task: 'Loading open-vocabulary detector (OWL-ViT)...' },
-      });
-
+      const progressCb = createProgressCallback('Loading detector (OWL-ViT)...');
       try {
+        const dtype = deviceToUse === 'webgpu' ? 'fp32' : 'q8';
         detectorPipeline = await pipeline('zero-shot-object-detection', 'Xenova/owlvit-base-patch32', {
           device: deviceToUse as any,
-          progress_callback: progressCallback,
+          dtype: dtype as any,
+          progress_callback: progressCb,
         });
         currentDevice = deviceToUse;
         activeModelName = 'Xenova/owlvit-base-patch32';
       } catch (gpuErr) {
-        console.warn('WebGPU init failed for OWL-ViT, falling back to WASM:', gpuErr);
+        console.warn('WebGPU init failed for OWL-ViT, falling back to WASM q8:', gpuErr);
         detectorPipeline = await pipeline('zero-shot-object-detection', 'Xenova/owlvit-base-patch32', {
           device: 'wasm',
-          progress_callback: progressCallback,
+          dtype: 'q8' as any,
+          progress_callback: progressCb,
         });
         currentDevice = 'wasm';
         activeModelName = 'Xenova/owlvit-base-patch32';
@@ -92,21 +170,20 @@ async function initPipelines(preferredDevice: 'webgpu' | 'wasm' = 'webgpu') {
     }
 
     if (!classifierPipeline) {
-      self.postMessage({
-        type: 'PROGRESS',
-        payload: { status: 'progress', task: 'Loading zero-shot classifier (CLIP)...' },
-      });
-
+      const progressCb = createProgressCallback('Loading classifier (CLIP)...');
       try {
+        const dtype = currentDevice === 'webgpu' ? 'fp32' : 'q8';
         classifierPipeline = await pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', {
           device: currentDevice as any,
-          progress_callback: progressCallback,
+          dtype: dtype as any,
+          progress_callback: progressCb,
         });
       } catch (clipErr) {
-        console.warn('Classifier fallback to wasm:', clipErr);
+        console.warn('Classifier fallback to WASM q8:', clipErr);
         classifierPipeline = await pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', {
           device: 'wasm',
-          progress_callback: progressCallback,
+          dtype: 'q8' as any,
+          progress_callback: progressCb,
         });
       }
     }
@@ -115,6 +192,8 @@ async function initPipelines(preferredDevice: 'webgpu' | 'wasm' = 'webgpu') {
       type: 'STATUS',
       status: 'ready',
       device: currentDevice,
+      modelName: activeModelName,
+      clipName: activeClipName,
     });
   } catch (err: any) {
     self.postMessage({
@@ -125,12 +204,67 @@ async function initPipelines(preferredDevice: 'webgpu' | 'wasm' = 'webgpu') {
   }
 }
 
+/**
+ * Isolated Smoke Test for single model (CLIP only)
+ */
+async function smokeTestClip(
+  imageBuffer?: ArrayBuffer,
+  imageBlob?: Blob,
+  width?: number,
+  height?: number,
+  channels: 1 | 2 | 3 | 4 = 4
+) {
+  const startTime = performance.now();
+  try {
+    let rawImage: RawImage;
+    if (imageBuffer && width && height) {
+      rawImage = new RawImage(new Uint8ClampedArray(imageBuffer), width, height, channels);
+    } else if (imageBlob) {
+      rawImage = await RawImage.fromBlob(imageBlob);
+    } else {
+      throw new Error('No valid image data buffer provided for smoke test.');
+    }
+
+    const loadStart = performance.now();
+    const clipProgress = createProgressCallback('Loading isolated CLIP model...');
+    const clip = await pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', {
+      device: 'wasm',
+      dtype: 'q8' as any,
+      progress_callback: clipProgress,
+    });
+    const loadTimeMs = Math.round(performance.now() - loadStart);
+
+    const inferStart = performance.now();
+    const result = await clip(rawImage, CLIP_PROMPTS);
+    const inferTimeMs = Math.round(performance.now() - inferStart);
+    const totalTimeMs = Math.round(performance.now() - startTime);
+
+    self.postMessage({
+      type: 'SMOKE_CLIP_RESULT',
+      result,
+      loadTimeMs,
+      inferTimeMs,
+      totalTimeMs,
+      device: 'wasm',
+      model: 'Xenova/clip-vit-base-patch32',
+    });
+  } catch (err: any) {
+    self.postMessage({
+      type: 'SMOKE_CLIP_ERROR',
+      error: err?.message || String(err),
+    });
+  }
+}
+
 async function analyze(
-  imageDataUrl: string,
+  imageBuffer: ArrayBuffer | undefined,
+  imageBlob: Blob | undefined,
+  imageDataUrl: string | undefined,
   imageWidth: number,
   imageHeight: number,
   scoreThreshold = 0.12,
-  iouThreshold = 0.45
+  iouThreshold = 0.45,
+  channels: 1 | 2 | 3 | 4 = 4
 ) {
   const startTime = performance.now();
 
@@ -138,8 +272,17 @@ async function analyze(
     await initPipelines();
   }
 
-  // Load raw image
-  const rawImage = await RawImage.fromURL(imageDataUrl);
+  // Construct RawImage without data: URL fetch
+  let rawImage: RawImage;
+  if (imageBuffer) {
+    rawImage = new RawImage(new Uint8ClampedArray(imageBuffer), imageWidth, imageHeight, channels);
+  } else if (imageBlob) {
+    rawImage = await RawImage.fromBlob(imageBlob);
+  } else if (imageDataUrl && !imageDataUrl.startsWith('data:')) {
+    rawImage = await RawImage.fromURL(imageDataUrl);
+  } else {
+    throw new Error('Image data must be transferred as ArrayBuffer or Blob to prevent CSP data: violation.');
+  }
 
   // 1. STAGE 1: Open-vocabulary detection with OWL-ViT
   const rawDetections = await detectorPipeline(rawImage, DETECTOR_QUERIES, {
@@ -167,13 +310,11 @@ async function analyze(
     const det = nmsFiltered[i];
     const { xmin, ymin, xmax, ymax } = det.box;
 
-    // Normalized coordinates
     const normX = Math.max(0, Math.min(1, xmin / imageWidth));
     const normY = Math.max(0, Math.min(1, ymin / imageHeight));
     const normW = Math.max(0.01, Math.min(1 - normX, (xmax - xmin) / imageWidth));
     const normH = Math.max(0.01, Math.min(1 - normY, (ymax - ymin) / imageHeight));
 
-    // Crop box from rawImage
     let clipProbs = {
       recyclable: 0.25,
       reusable: 0.25,
@@ -192,14 +333,10 @@ async function analyze(
         Math.round(ymax),
       ]);
 
-      // Convert crop to data URL for belt tile texture in 3D twin
       cropDataUrl = cropped.toDataURL();
-
-      // Zero-shot CLIP classification on cropped tile
       const clipOutput = await classifierPipeline(cropped, CLIP_PROMPTS);
 
       if (Array.isArray(clipOutput)) {
-        // Find probabilities by prompt label
         const findScore = (match: string) => {
           const item = clipOutput.find((o: any) => o.label.includes(match));
           return item ? item.score : 0;
@@ -256,14 +393,25 @@ self.addEventListener('message', async (e: MessageEvent) => {
 
   if (type === 'INIT') {
     await initPipelines(e.data.preferredDevice);
+  } else if (type === 'SMOKE_CLIP') {
+    await smokeTestClip(
+      e.data.imageBuffer,
+      e.data.imageBlob,
+      e.data.imageWidth,
+      e.data.imageHeight,
+      e.data.channels
+    );
   } else if (type === 'ANALYZE') {
     try {
       await analyze(
+        e.data.imageBuffer,
+        e.data.imageBlob,
         e.data.imageDataUrl,
         e.data.imageWidth,
         e.data.imageHeight,
         e.data.detectorScoreThreshold,
-        e.data.detectorIouThreshold
+        e.data.detectorIouThreshold,
+        e.data.channels
       );
     } catch (err: any) {
       self.postMessage({

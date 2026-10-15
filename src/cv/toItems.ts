@@ -34,6 +34,7 @@ export interface MapDetectionOptions {
   provenance?: Provenance;
   geminiHazardEstimate?: number;
   policy?: GatePolicy;
+  manualClass?: MaterialClass;
 }
 
 /**
@@ -84,86 +85,114 @@ export function mapDetectionToItem(
   options: MapDetectionOptions = {}
 ): Item {
   const provenance: Provenance = options.provenance || detection.provenance || 'Model-inferred';
-  const probs = detection.clipProbabilities || {
-    recyclable: 0.25,
-    reusable: 0.25,
-    biodegradable: 0.25,
-    hazardous: 0.25,
-    batteryRisk: 0.0,
-  };
-
-  // 1. Identify primary class (highest probability among standard 4 classes)
-  const candidateClasses: MaterialClass[] = ['recyclable', 'reusable', 'biodegradable', 'hazardous'];
-  let primaryClass: MaterialClass = 'recyclable';
-  let topProb = -1;
-
-  for (const cls of candidateClasses) {
-    const p = probs[cls] ?? 0;
-    if (p > topProb) {
-      topProb = p;
-      primaryClass = cls;
-    }
-  }
-
-  const overallConfidence = Number(Math.max(0, Math.min(1, topProb)).toFixed(4));
-
-  // 2. Summed hazard group: hazardous class prob + weighted battery risk
-  const rawHazard = (probs.hazardous || 0) + (probs.batteryRisk ? probs.batteryRisk * 0.45 : 0);
-  let hazardProbability = Number(Math.max(0, Math.min(1, rawHazard)).toFixed(4));
-
-  // If detector explicitly recognized an intrinsically hazardous entity (e.g. power bank, battery, vape pen, phone),
-  // prevent a confused crop classifier from allowing it to bypass the safety floor.
   const normalizedLabel = detection.label.toLowerCase().trim();
   const expectedClass = DETECTOR_LABEL_CLASS_MAP[normalizedLabel];
-  if (expectedClass === 'hazardous' && hazardProbability < SAFETY_FLOOR) {
-    hazardProbability = SAFETY_FLOOR;
-  }
+  const isHuman = provenance === 'Human-verified';
 
-  // 3. Gemini "Raise Only" Rule: Gemini may increase hazardProbability, never lower it
-  if (options.geminiHazardEstimate !== undefined) {
-    if (options.geminiHazardEstimate > hazardProbability) {
-      hazardProbability = Number(Math.min(1.0, options.geminiHazardEstimate).toFixed(4));
-    }
-  }
-
-  // 4. Model Disagreement
-  const modelDisagreement = calculateModelDisagreement(
-    detection.label,
-    detection.score,
-    primaryClass,
-    overallConfidence,
-    options.geminiHazardEstimate,
-    hazardProbability
-  );
+  let primaryClass: MaterialClass = 'recyclable';
+  let overallConfidence = 0.85;
+  let hazardProbability = 0.02;
+  let modelDisagreement = 0.0;
+  let detectionsList: Detection[] = [];
 
   const itemId = detection.id || `photo-item-${String(index + 1).padStart(2, '0')}`;
   const itemName = detection.label
     ? detection.label.charAt(0).toUpperCase() + detection.label.slice(1)
     : `Detected Item ${index + 1}`;
 
-  // 5. Build Stage 1 (Detector) and Stage 2 (CLIP) Detection objects
-  const detectionsList: Detection[] = [
-    {
-      id: `${itemId}-det-owlvit`,
-      box: detection.box,
-      label: detection.label,
-      materialClass: DETECTOR_LABEL_CLASS_MAP[detection.label.toLowerCase()] || primaryClass,
-      hazardProbability,
-      confidence: Number(detection.score.toFixed(4)),
-      source: 'owlvit-base-patch32',
-      provenance,
-    },
-    {
-      id: `${itemId}-det-clip`,
-      box: detection.box,
-      label: `${primaryClass} (${(overallConfidence * 100).toFixed(0)}%)`,
-      materialClass: primaryClass,
-      hazardProbability,
-      confidence: overallConfidence,
-      source: 'clip-vit-base-patch32',
-      provenance,
-    },
-  ];
+  // HONESTY: If this is a human box and CLIP did not run on the crop,
+  // class and hazard are derived deterministically from the human choice.
+  if (isHuman && !detection.clipProbabilities) {
+    primaryClass = options.manualClass || expectedClass || 'recyclable';
+    overallConfidence = 1.0;
+    hazardProbability = primaryClass === 'hazardous' ? 0.85 : 0.02;
+    modelDisagreement = 0.0;
+
+    detectionsList = [
+      {
+        id: `${itemId}-det-human`,
+        box: detection.box,
+        label: detection.label || 'Human Box',
+        materialClass: primaryClass,
+        hazardProbability,
+        confidence: 1.0,
+        source: 'Human Operator',
+        provenance: 'Human-verified',
+      },
+    ];
+  } else {
+    const probs = detection.clipProbabilities || {
+      recyclable: 0.25,
+      reusable: 0.25,
+      biodegradable: 0.25,
+      hazardous: 0.25,
+      batteryRisk: 0.0,
+    };
+
+    // 1. Identify primary class (highest probability among standard 4 classes)
+    const candidateClasses: MaterialClass[] = ['recyclable', 'reusable', 'biodegradable', 'hazardous'];
+    let topProb = -1;
+
+    for (const cls of candidateClasses) {
+      const p = probs[cls] ?? 0;
+      if (p > topProb) {
+        topProb = p;
+        primaryClass = cls;
+      }
+    }
+
+    overallConfidence = Number(Math.max(0, Math.min(1, topProb)).toFixed(4));
+
+    // 2. Summed hazard group: hazardous class prob + weighted battery risk
+    const rawHazard = (probs.hazardous || 0) + (probs.batteryRisk ? probs.batteryRisk * 0.45 : 0);
+    hazardProbability = Number(Math.max(0, Math.min(1, rawHazard)).toFixed(4));
+
+    // If detector explicitly recognized an intrinsically hazardous entity (e.g. power bank, battery, vape pen, phone),
+    // prevent a confused crop classifier from allowing it to bypass the safety floor.
+    if (expectedClass === 'hazardous' && hazardProbability < SAFETY_FLOOR) {
+      hazardProbability = SAFETY_FLOOR;
+    }
+
+    // 3. Gemini "Raise Only" Rule: Gemini may increase hazardProbability, never lower it
+    if (options.geminiHazardEstimate !== undefined) {
+      if (options.geminiHazardEstimate > hazardProbability) {
+        hazardProbability = Number(Math.min(1.0, options.geminiHazardEstimate).toFixed(4));
+      }
+    }
+
+    // 4. Model Disagreement
+    modelDisagreement = calculateModelDisagreement(
+      detection.label,
+      detection.score,
+      primaryClass,
+      overallConfidence,
+      options.geminiHazardEstimate,
+      hazardProbability
+    );
+
+    detectionsList = [
+      {
+        id: `${itemId}-det-owlvit`,
+        box: detection.box,
+        label: detection.label,
+        materialClass: expectedClass || primaryClass,
+        hazardProbability,
+        confidence: Number(detection.score.toFixed(4)),
+        source: 'owlvit-base-patch32',
+        provenance,
+      },
+      {
+        id: `${itemId}-det-clip`,
+        box: detection.box,
+        label: `${primaryClass} (${(overallConfidence * 100).toFixed(0)}%)`,
+        materialClass: primaryClass,
+        hazardProbability,
+        confidence: overallConfidence,
+        source: 'clip-vit-base-patch32',
+        provenance,
+      },
+    ];
+  }
 
   // 6. Pre-calculate gate score and route with pure engine gate
   const policy = options.policy || DEFAULT_GATE_POLICY;

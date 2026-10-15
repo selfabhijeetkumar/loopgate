@@ -104,8 +104,52 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
       setImageDims({ width, height });
       setStatus('idle');
     } catch (err: any) {
+      setImageSrc(null);
+      setImageDims({ width: 0, height: 0 });
       setStatus('error');
       setErrorMessage(err?.message || 'Unable to load image');
+    }
+  };
+
+  // Load sample intake photo
+  const handleLoadSamplePhoto = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 640, 480);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(20, 20, 600, 440);
+
+      // PET bottle
+      ctx.fillStyle = '#0ea5e9';
+      ctx.fillRect(120, 140, 90, 200);
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(150, 95, 30, 45);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px monospace';
+      ctx.fillText('PET BOTTLE', 130, 240);
+
+      // Li-Ion pouch cell (hazard)
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(380, 180, 140, 90);
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(365, 205, 15, 40);
+      ctx.fillStyle = '#000000';
+      ctx.font = '12px monospace';
+      ctx.fillText('LI-ION PACK', 410, 230);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      setImageSrc(dataUrl);
+      setImageDims({ width: 640, height: 480 });
+      setStatus('idle');
+      setErrorMessage(null);
+      setDetections([]);
+      setItems([]);
+      setSelectedId(null);
     }
   };
 
@@ -174,16 +218,10 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
 
       const newDet: NormalizedDetection = {
         id: newItem.id,
-        label: manualLabel,
+        label: manualLabel.trim() || 'Human Box',
         score: 1.0,
         box: { x, y, width, height },
-        clipProbabilities: {
-          recyclable: manualClass === 'recyclable' ? 0.95 : 0.05,
-          reusable: manualClass === 'reusable' ? 0.95 : 0.05,
-          biodegradable: manualClass === 'biodegradable' ? 0.95 : 0.05,
-          hazardous: manualClass === 'hazardous' ? 0.95 : 0.05,
-          batteryRisk: manualClass === 'hazardous' ? 0.85 : 0.0,
-        },
+        clipProbabilities: undefined, // Honest: no fake 95/5/5/5 defaults
         cropDataUrl: imageSrc || undefined,
         provenance: 'Human-verified',
       };
@@ -321,11 +359,19 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
               EVIDENCE LAB // CLIENT-SIDE CV INSPECTOR
             </h2>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-text-muted">DEVICE:</span>
-            <span className="text-[10px] font-mono font-bold text-amber-400 uppercase">
-              {inferenceMeta ? inferenceMeta.device : 'WebGPU / WASM auto'}
-            </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono">
+              <span className="text-text-muted">DETECTOR:</span>
+              <span className="text-text-primary font-bold">
+                {inferenceMeta?.model ? inferenceMeta.model : 'No model loaded'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono">
+              <span className="text-text-muted">DEVICE:</span>
+              <span className="text-amber-400 font-bold uppercase">
+                {inferenceMeta?.device ? inferenceMeta.device : 'STANDBY'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -383,6 +429,15 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
             className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-primary border border-border-default hover:border-amber-500/50 text-text-primary text-xs font-mono rounded-[2px] transition-colors"
           >
             Upload Photo
+          </button>
+
+          <button
+            type="button"
+            id="load-sample-photo-btn"
+            onClick={handleLoadSamplePhoto}
+            className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-primary border border-border-default hover:border-amber-500/50 text-text-primary text-xs font-mono rounded-[2px] transition-colors"
+          >
+            Sample Photo
           </button>
 
           <button
@@ -563,7 +618,9 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
                         }}
                         className="absolute -top-5 left-0 px-1.5 py-0.5 text-[9px] font-mono font-bold tracking-wider uppercase border border-border-subtle whitespace-nowrap"
                       >
-                        {det.label} [{(det.score * 100).toFixed(0)}%]
+                        {det.provenance === 'Human-verified' || item?.provenance === 'Human-verified'
+                          ? `HUMAN BOX // ${det.label}`
+                          : `${det.label} [${(det.score * 100).toFixed(0)}%]`}
                       </div>
                     </div>
                   );
@@ -665,22 +722,34 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
                     {selectedItem.hazardProbability >= SAFETY_FLOOR && ' [SAFETY FLOOR TRIGGERED]'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-text-muted text-[11px]">Overall Confidence:</span>
-                  <span className="text-text-primary">
-                    {(selectedItem.overallConfidence * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-text-muted text-[11px]">Model Disagreement:</span>
-                  <span className="text-amber-400">
-                    {( (selectedItem.modelDisagreement || 0) * 100 ).toFixed(1)}%
-                  </span>
-                </div>
+                {selectedItem.provenance !== 'Human-verified' && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted text-[11px]">Overall Confidence:</span>
+                      <span className="text-text-primary">
+                        {(selectedItem.overallConfidence * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted text-[11px]">Model Disagreement:</span>
+                      <span className="text-amber-400">
+                        {((selectedItem.modelDisagreement || 0) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Zero-Shot Class Probabilities Quiet Bars */}
-              {selectedDetection?.clipProbabilities && (
+              {/* Human Box Honest Advisory */}
+              {selectedItem.provenance === 'Human-verified' && (
+                <div className="bg-[#090c10] border border-border-subtle p-3 rounded-[2px] text-[11px] font-mono text-text-secondary leading-relaxed">
+                  <span className="text-amber-400 font-bold block mb-1">[HUMAN BOX]</span>
+                  No model output. Class selected by human operator; hazard derived deterministically.
+                </div>
+              )}
+
+              {/* Zero-Shot Class Probabilities Quiet Bars (Model-inferred only) */}
+              {selectedItem.provenance !== 'Human-verified' && selectedDetection?.clipProbabilities && (
                 <div className="space-y-2 bg-bg-elevated/60 border border-border-subtle p-3 rounded-[2px]">
                   <div className="text-[10px] text-text-muted uppercase tracking-wider">
                     Zero-Shot CLIP Classification Probs:

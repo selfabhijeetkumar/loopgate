@@ -84,9 +84,9 @@ export const CHAPTER_CAMERA_STATES: SceneCameraState[] = [
   },
   // 4: RUN IT YOURSELF — interactive orbit view of complete line (all stations visible)
   {
-    position: new THREE.Vector3(-0.5, 10.0, 20.0),
-    target: new THREE.Vector3(0.0, 0.6, 0.0),
-    fov: 52,
+    position: new THREE.Vector3(-0.5, 13.0, 26.0),
+    target: new THREE.Vector3(0.0, 0.5, 0.0),
+    fov: 54,
   },
   // 5: STREAMS & ASSUMPTIONS — pulled-back elevated oblique, darker world
   {
@@ -760,20 +760,17 @@ interface FpsTrackerProps {
 }
 
 function FpsTracker({ onFpsUpdate }: FpsTrackerProps) {
-  const frameTimes = useRef<number[]>([]);
-  const lastFrameTime = useRef(performance.now());
+  const frameCount = useRef(0);
+  const lastTime = useRef(performance.now());
 
   useFrame(() => {
+    frameCount.current++;
     const now = performance.now();
-    const delta = now - lastFrameTime.current;
-    lastFrameTime.current = now;
-
-    frameTimes.current.push(delta);
-    if (frameTimes.current.length > 60) frameTimes.current.shift();
-
-    if (frameTimes.current.length >= 20) {
-      const avg = frameTimes.current.reduce((a, b) => a + b, 0) / frameTimes.current.length;
-      const fps = Math.round(1000 / avg);
+    const elapsed = now - lastTime.current;
+    if (elapsed >= 500) {
+      const fps = Math.round((frameCount.current * 1000) / elapsed);
+      frameCount.current = 0;
+      lastTime.current = now;
       onFpsUpdate?.(fps);
     }
   });
@@ -800,7 +797,7 @@ function CameraRig({
   parallaxOffset,
   reducedMotion,
 }: CameraRigProps) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const currentPos = useRef(new THREE.Vector3().copy(CHAPTER_CAMERA_STATES[0].position));
   const currentTarget = useRef(new THREE.Vector3().copy(CHAPTER_CAMERA_STATES[0].target));
   const currentFov = useRef(CHAPTER_CAMERA_STATES[0].fov);
@@ -818,7 +815,13 @@ function CameraRig({
 
     camera.position.copy(finalPos);
     camera.lookAt(currentTarget.current);
-    (camera as THREE.PerspectiveCamera).fov = currentFov.current;
+
+    // Dynamic FOV scaling for narrow viewports (< 1.1 aspect ratio) so entire line is visible
+    const aspect = size.width / Math.max(1, size.height);
+    const aspectScale = aspect < 1.1 ? Math.min(1.5, 1.1 / Math.max(0.4, aspect)) : 1.0;
+    const effectiveFov = currentFov.current * aspectScale;
+
+    (camera as THREE.PerspectiveCamera).fov = effectiveFov;
     (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
   });
 

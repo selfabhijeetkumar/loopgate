@@ -30,3 +30,12 @@ export type { BranchSnapshot, BranchDeltas, CompareResult, SweepPoint } from './
 // Assumptions
 export { ENGINE_ASSUMPTIONS, getAssumption, ASM } from './assumptions';
 export type { EngineAssumption } from './assumptions';
+
+// Quality auto-downgrade
+export {
+  createInitialQualityState,
+  updateQualityState,
+  AUTO_DOWNGRADE_FPS,
+  AUTO_DOWNGRADE_WINDOW_MS,
+} from './quality';
+export type { QualityMode, QualityState, QualityStepResult } from './quality';

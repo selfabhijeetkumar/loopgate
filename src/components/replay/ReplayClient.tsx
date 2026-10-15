@@ -8,9 +8,17 @@
 
 import React from 'react';
 import { useSimulation } from '@/components/twin/SimulationContext';
+import { SYNTHETIC_SCENARIO_ITEMS } from '@/data/scenario';
 import { ReplayTheatre } from './ReplayTheatre';
 
 export function ReplayClient() {
-  const { items } = useSimulation();
-  return <ReplayTheatre items={items} />;
+  const { items, photoItems, activeSource } = useSimulation();
+  return (
+    <ReplayTheatre
+      items={items}
+      simulatedItems={SYNTHETIC_SCENARIO_ITEMS}
+      photoItems={photoItems}
+      activeSource={activeSource}
+    />
+  );
 }

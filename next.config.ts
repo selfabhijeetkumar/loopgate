@@ -17,11 +17,11 @@ import type { NextConfig } from "next";
  */
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval';
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https:;
   font-src 'self' data:;
-  connect-src 'self' blob: https://huggingface.co https://*.huggingface.co https://generativelanguage.googleapis.com;
+  connect-src 'self' blob: data: https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.co https://generativelanguage.googleapis.com;
   worker-src 'self' blob:;
   frame-ancestors 'none';
   base-uri 'self';

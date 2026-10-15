@@ -1,7 +1,7 @@
 /**
  * src/cv/pipeline.ts
  * Main-thread interface to the CV pipeline. Handles worker orchestration,
- * image downscaling, and download progress tracking.
+ * raw pixel buffer transfer (zero data: fetch CSP violations), and download progress tracking.
  *
  * HONESTY CONTRACT: If the model fails to load or the worker errors,
  * we REJECT — we never synthesize fake detections. The Evidence Lab
@@ -17,6 +17,22 @@ import { mapDetectionsToItems, mapDetectionToItem } from './toItems';
 import type { Item, MaterialClass } from '@/domain/types';
 
 export type ProgressListener = (payload: WorkerProgressPayload) => void;
+
+export interface PreparedImage {
+  dataUrl: string;
+  buffer: ArrayBuffer;
+  width: number;
+  height: number;
+}
+
+export interface SmokeTestResult {
+  model: string;
+  device: string;
+  loadTimeMs: number;
+  inferTimeMs: number;
+  totalTimeMs: number;
+  result: any;
+}
 
 class ComputerVisionPipeline {
   private worker: Worker | null = null;
@@ -50,25 +66,33 @@ class ComputerVisionPipeline {
   }
 
   /** Dynamic model info for Evidence Lab header */
-  public getModelInfo(): { detector: string; clip: string; device: string } {
+  public getModelInfo(): { detector: string; clip: string; device: string; isReady: boolean } {
     return {
       detector: this.activeModel,
       clip: this.activeClip,
       device: this.activeDevice,
+      isReady: this.isReady,
     };
   }
 
-  private getWorker(): Worker | null {
-    if (this.worker) return this.worker;
+  public getWorker(): Worker | null {
     if (typeof window === 'undefined') return null;
+
+    // Preserve worker across React StrictMode remounts & HMR
+    if ((window as any).__LOOPGATE_CV_WORKER__) {
+      this.worker = (window as any).__LOOPGATE_CV_WORKER__;
+      return this.worker;
+    }
+    if (this.worker) return this.worker;
 
     try {
       this.worker = new Worker(new URL('./worker.ts', import.meta.url), {
         type: 'module',
       });
+      (window as any).__LOOPGATE_CV_WORKER__ = this.worker;
 
-      this.worker.onmessage = (e) => {
-        const { type, payload, status, device, error, modelName } = e.data || {};
+      this.worker.addEventListener('message', (e) => {
+        const { type, payload, status, device, error, modelName, clipName } = e.data || {};
         if (type === 'PROGRESS' && payload) {
           this.notifyProgress(payload);
         } else if (type === 'STATUS') {
@@ -76,12 +100,17 @@ class ComputerVisionPipeline {
             this.isReady = true;
             this.activeDevice = device || 'wasm';
             if (modelName) this.activeModel = modelName;
+            if (clipName) this.activeClip = clipName;
             this.notifyProgress({ status: 'ready', task: `Ready [${this.activeDevice.toUpperCase()}]` });
           } else if (status === 'error') {
             this.notifyProgress({ status: 'error', task: error || 'Failed to load model' });
           }
+        } else if (type === 'CSP_VIOLATION') {
+          console.error('[CV WORKER CSP VIOLATION]', payload);
+        } else if (type === 'FETCH_ERROR') {
+          console.error('[CV WORKER FETCH FAILED]', payload);
         }
-      };
+      });
 
       this.worker.onerror = (err) => {
         console.warn('CV Worker encountered error:', err);
@@ -106,12 +135,9 @@ class ComputerVisionPipeline {
 
   /**
    * Resizes large images to max 1024px maintaining aspect ratio to prevent memory pressure.
+   * Generates both a display dataURL and raw pixel ArrayBuffer for zero-copy worker transfer.
    */
-  public async prepareImage(fileOrDataUrl: File | string): Promise<{
-    dataUrl: string;
-    width: number;
-    height: number;
-  }> {
+  public async prepareImage(fileOrDataUrl: File | string): Promise<PreparedImage> {
     return new Promise((resolve, reject) => {
       let src = '';
       let objectUrl: string | null = null;
@@ -153,15 +179,15 @@ class ComputerVisionPipeline {
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           if (objectUrl) URL.revokeObjectURL(objectUrl);
-          resolve({ dataUrl: src, width: w, height: h });
+          resolve({ dataUrl: src, buffer: new ArrayBuffer(0), width: w, height: h });
           return;
         }
 
         ctx.drawImage(img, 0, 0, w, h);
-        // toDataURL used only for worker postMessage transfer (not fetch)
         const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        const imgData = ctx.getImageData(0, 0, w, h);
         if (objectUrl) URL.revokeObjectURL(objectUrl);
-        resolve({ dataUrl, width: w, height: h });
+        resolve({ dataUrl, buffer: imgData.data.buffer, width: w, height: h });
       };
 
       img.onerror = () => {
@@ -174,7 +200,50 @@ class ComputerVisionPipeline {
   }
 
   /**
+   * Smoke test: Runs isolated CLIP model on a single image.
+   */
+  public async runClipSmokeTest(fileOrDataUrl: File | string): Promise<SmokeTestResult> {
+    const { buffer, width, height } = await this.prepareImage(fileOrDataUrl);
+    const worker = this.getWorker();
+
+    if (!worker) {
+      throw new Error('Web Worker could not be started.');
+    }
+
+    return new Promise((resolve, reject) => {
+      const handler = (e: MessageEvent) => {
+        const { type, result, loadTimeMs, inferTimeMs, totalTimeMs, device, model, error } = e.data || {};
+        if (type === 'SMOKE_CLIP_RESULT') {
+          worker.removeEventListener('message', handler);
+          resolve({ result, loadTimeMs, inferTimeMs, totalTimeMs, device, model });
+        } else if (type === 'SMOKE_CLIP_ERROR') {
+          worker.removeEventListener('message', handler);
+          reject(new Error(`CLIP smoke test failed: ${error}`));
+        }
+      };
+
+      worker.addEventListener('message', handler);
+      worker.postMessage(
+        {
+          type: 'SMOKE_CLIP',
+          imageBuffer: buffer,
+          imageWidth: width,
+          imageHeight: height,
+          channels: 4,
+        },
+        [buffer]
+      );
+
+      setTimeout(() => {
+        worker.removeEventListener('message', handler);
+        reject(new Error('Smoke test timed out after 90 seconds.'));
+      }, 90_000);
+    });
+  }
+
+  /**
    * Analyzes an image with OWL-ViT and CLIP inside the Web Worker.
+   * Transfers raw pixel ArrayBuffer to worker — zero data: URL fetches.
    * REJECTS if the worker is unavailable or the model errors.
    * Never synthesizes fake detections.
    */
@@ -182,7 +251,7 @@ class ComputerVisionPipeline {
     fileOrDataUrl: File | string,
     scoreThreshold = 0.12
   ): Promise<PipelineAnalysisResult> {
-    const { dataUrl, width, height } = await this.prepareImage(fileOrDataUrl);
+    const { dataUrl, buffer, width, height } = await this.prepareImage(fileOrDataUrl);
     const worker = this.getWorker();
 
     if (!worker) {
@@ -216,14 +285,19 @@ class ComputerVisionPipeline {
       };
 
       worker.addEventListener('message', handler);
-      worker.postMessage({
-        type: 'ANALYZE',
-        imageDataUrl: dataUrl,
-        imageWidth: width,
-        imageHeight: height,
-        detectorScoreThreshold: scoreThreshold,
-        detectorIouThreshold: 0.45,
-      });
+      worker.postMessage(
+        {
+          type: 'ANALYZE',
+          imageBuffer: buffer,
+          imageDataUrl: dataUrl,
+          imageWidth: width,
+          imageHeight: height,
+          detectorScoreThreshold: scoreThreshold,
+          detectorIouThreshold: 0.45,
+          channels: 4,
+        },
+        [buffer]
+      );
 
       // 90s for first model download on slow connections
       setTimeout(() => {
@@ -238,6 +312,7 @@ class ComputerVisionPipeline {
 
   /**
    * Creates a human-verified item from a user-drawn bounding box.
+   * Honest contract: No fake 95/5/5/5 CLIP probabilities or fake model scores.
    * Always provenance: 'Human-verified', never 'Model-inferred'.
    */
   public createManualItem(
@@ -249,21 +324,19 @@ class ComputerVisionPipeline {
     const isHazard = materialClass === 'hazardous';
     const detection: NormalizedDetection = {
       id: `manual-${Date.now().toString(36)}`,
-      label,
+      label: label.trim() || 'Human Box',
       score: 1.0,
       box,
-      clipProbabilities: {
-        recyclable: materialClass === 'recyclable' ? 0.95 : 0.05,
-        reusable: materialClass === 'reusable' ? 0.95 : 0.05,
-        biodegradable: materialClass === 'biodegradable' ? 0.95 : 0.05,
-        hazardous: isHazard ? 0.95 : 0.05,
-        batteryRisk: isHazard ? 0.85 : 0.0,
-      },
+      // Honest: no fake CLIP probabilities
+      clipProbabilities: undefined,
       cropDataUrl: imageCropDataUrl,
       provenance: 'Human-verified',
     };
 
-    return mapDetectionToItem(detection, 0, { provenance: 'Human-verified' });
+    return mapDetectionToItem(detection, 0, {
+      provenance: 'Human-verified',
+      manualClass: materialClass,
+    });
   }
 }
 

@@ -19,7 +19,7 @@ import {
   type CompareResult,
   type BranchSnapshot,
 } from '@/engine';
-import { DEFAULT_GATE_POLICY } from '@/engine/gate';
+import { DEFAULT_GATE_POLICY, SAFETY_FLOOR } from '@/engine/gate';
 import { ProvenanceChip } from '@/components/ProvenanceChip';
 import {
   createAuditEvent,
@@ -35,7 +35,10 @@ import {
 // ---------------------------------------------------------------------------
 
 interface ReplayTheatreProps {
-  items: Item[];
+  items?: Item[];
+  simulatedItems?: Item[];
+  photoItems?: Item[] | null;
+  activeSource?: 'simulated' | 'photo';
   className?: string;
 }
 
@@ -133,7 +136,7 @@ function SvgLane({
         )}
       </div>
 
-      <div className="relative w-full overflow-x-auto">
+      <div className="relative w-full overflow-x-auto bg-[#070a0d] border border-border-subtle p-2 rounded-[2px]">
         <svg
           viewBox={`0 0 ${LANE_W} ${LANE_H}`}
           className="w-full h-auto min-w-[480px]"
@@ -329,30 +332,52 @@ function AuditLogTable({ events, onClear }: { events: AuditEvent[]; onClear: () 
 // ---------------------------------------------------------------------------
 // Main Replay Theatre
 // ---------------------------------------------------------------------------
-export function ReplayTheatre({ items, className = '' }: ReplayTheatreProps) {
+export function ReplayTheatre({
+  items = [],
+  simulatedItems = [],
+  photoItems = null,
+  className = '',
+}: ReplayTheatreProps) {
+  const [batchMode, setBatchMode] = useState<'simulated' | 'photo'>('simulated');
   const [t, setT] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef<number>(performance.now());
 
-  const maxT = Math.max(4, items.length * 2.5 + 8);
+  const activeItems = useMemo(() => {
+    if (batchMode === 'photo') {
+      return photoItems && photoItems.length > 0 ? photoItems : [];
+    }
+    return simulatedItems && simulatedItems.length > 0 ? simulatedItems : items;
+  }, [batchMode, photoItems, simulatedItems, items]);
 
-  // Compute branch comparison once per items change
-  const compare: CompareResult = useMemo(
-    () => compareBranches(items, NO_GATE_POLICY, DEFAULT_GATE_POLICY),
-    [items]
-  );
+  const maxT = Math.max(4, activeItems.length * 2.5 + 8);
+
+  // Check if current photo batch contains no hazardous items
+  const photoHasNoHazards = useMemo(() => {
+    if (batchMode !== 'photo' || activeItems.length === 0) return false;
+    return !activeItems.some(
+      (it) => it.hazardProbability >= SAFETY_FLOOR || it.primaryClass === 'hazardous'
+    );
+  }, [batchMode, activeItems]);
+
+  // Compute branch comparison once per items change (only when items present)
+  const compare: CompareResult | null = useMemo(() => {
+    if (activeItems.length === 0) return null;
+    return compareBranches(activeItems, NO_GATE_POLICY, DEFAULT_GATE_POLICY);
+  }, [activeItems]);
 
   // Which items are hazardous in Branch A at the compactor phase?
   const hazardAtCompactorIds = useMemo(() => {
+    if (!compare) return [];
     return compare.baseline.decisions
       .filter((d) => {
-        const item = items.find((it) => it.id === d.itemId);
+        const item = activeItems.find((it) => it.id === d.itemId);
         return item && item.hazardProbability >= 0.30 && d.route === 'compactor';
       })
       .map((d) => d.itemId);
-  }, [compare, items]);
+  }, [compare, activeItems]);
 
   // Load audit events on mount
   useEffect(() => {
@@ -361,11 +386,11 @@ export function ReplayTheatre({ items, className = '' }: ReplayTheatreProps) {
 
   // Record batch start audit event when items change
   useEffect(() => {
-    if (items.length === 0) return;
+    if (activeItems.length === 0) return;
     const ev = createAuditEvent({
       itemId: null,
       itemName: null,
-      action: `Replay batch loaded: ${items.length} items`,
+      action: `Replay batch loaded (${batchMode}): ${activeItems.length} items`,
       reasonCode: 'BATCH_START',
       fromRoute: null,
       toRoute: null,
@@ -374,7 +399,7 @@ export function ReplayTheatre({ items, className = '' }: ReplayTheatreProps) {
     const updated = appendAuditEvent(ev);
     setAuditEvents(updated);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length]);
+  }, [activeItems.length, batchMode]);
 
   // Playback loop
   useEffect(() => {
@@ -426,59 +451,116 @@ export function ReplayTheatre({ items, className = '' }: ReplayTheatreProps) {
   // Highlight hazard at compactor when any hazard item reaches it in Branch A
   const showHazardAlert = useMemo(() => {
     return hazardAtCompactorIds.some((id) => {
-      const idx = items.findIndex((it) => it.id === id);
+      const idx = activeItems.findIndex((it) => it.id === id);
       if (idx < 0) return false;
       const elapsed = t - idx * 2.5;
       return elapsed >= 4 && elapsed < 7;
     });
-  }, [hazardAtCompactorIds, items, t]);
+  }, [hazardAtCompactorIds, activeItems, t]);
 
-  const { baseline, gated, deltas } = compare;
-
-  if (items.length === 0) {
-    return (
-      <div className={`text-xs font-mono text-text-muted py-8 text-center border border-border-subtle rounded-[2px] ${className}`}>
-        Load a scenario or upload a photo to populate the replay.
-      </div>
-    );
-  }
+  const baseline = compare?.baseline;
+  const gated = compare?.gated;
+  const deltas = compare?.deltas;
 
   return (
     <div className={`flex flex-col gap-6 ${className}`} id="replay" aria-label="Replay Theatre">
 
-      {/* Header */}
+      {/* Header & Batch Switch */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-4">
         <div className="space-y-1">
           <div className="text-[10px] font-mono uppercase tracking-widest text-amber-500">
-            Branch Comparison // In This Simulated Scenario
+            Branch Comparison // {batchMode === 'photo' ? 'Uploaded Photo Batch' : 'Simulated Scenario'}
           </div>
           <h3 className="text-lg font-display font-bold text-text-primary">
             Standard Line vs{' '}
             <span className="font-serif-italic font-normal text-amber-400">Loopgate</span>
           </h3>
         </div>
-        <ProvenanceChip provenance="Calculated" showPrefix />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Batch switch */}
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span className="text-text-muted">Batch:</span>
+            <div className="inline-flex border border-border-default rounded-[2px] overflow-hidden">
+              <button
+                type="button"
+                id="replay-batch-simulated"
+                onClick={() => {
+                  setBatchMode('simulated');
+                  setT(0);
+                  setIsPlaying(false);
+                }}
+                className={`px-2.5 py-1 text-[11px] font-mono transition-colors ${
+                  batchMode === 'simulated'
+                    ? 'bg-amber-500 text-bg-primary font-bold'
+                    : 'bg-bg-elevated text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Simulated scenario
+              </button>
+              <button
+                type="button"
+                id="replay-batch-photo"
+                onClick={() => {
+                  setBatchMode('photo');
+                  setT(0);
+                  setIsPlaying(false);
+                }}
+                className={`px-2.5 py-1 text-[11px] font-mono border-l border-border-default transition-colors ${
+                  batchMode === 'photo'
+                    ? 'bg-amber-500 text-bg-primary font-bold'
+                    : 'bg-bg-elevated text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                My photo
+              </button>
+            </div>
+          </div>
+          <ProvenanceChip provenance="Calculated" showPrefix />
+        </div>
       </div>
 
-      {/* Dual SVG Lanes */}
-      <div className="flex flex-col gap-3">
-        <SvgLane
-          label="Branch A — Standard Line (No Gate)"
-          branchKey="A"
-          items={items}
-          snapshot={baseline}
-          t={t}
-          highlightHazardAtCompactor={showHazardAlert}
-        />
-        <SvgLane
-          label="Branch B — Loopgate Gated Policy"
-          branchKey="B"
-          items={items}
-          snapshot={gated}
-          t={t}
-          highlightHazardAtCompactor={false}
-        />
-      </div>
+      {/* No photo batch loaded notice */}
+      {activeItems.length === 0 && (
+        <div className="bg-[#090c10] border border-border-default p-4 rounded-[2px] text-xs font-mono text-text-muted space-y-1.5">
+          <div className="text-amber-400 font-bold uppercase tracking-wider">[NO PHOTO BATCH LOADED]</div>
+          <p className="leading-relaxed">
+            Upload an intake photo in the Evidence Lab below and click &ldquo;Send to Twin&rdquo; to populate custom photo items into the replay.
+          </p>
+        </div>
+      )}
+
+      {compare && baseline && gated && (
+        <>
+          {/* Photo batch with zero hazards notice */}
+          {photoHasNoHazards && (
+            <div className="bg-[#090c10] border border-border-default p-3.5 rounded-[2px] text-xs font-mono text-text-secondary leading-relaxed flex items-center gap-2.5">
+              <span className="w-2 h-2 bg-slate-400 rounded-none shrink-0" />
+              <span>
+                This intake batch contains no hazardous items; Branch A (Standard Line) and Branch B (Loopgate) produce identical routing with zero compactor escapes.
+              </span>
+            </div>
+          )}
+
+          {/* Dual SVG Lanes with Solid Dark Background Scrim */}
+          <div className="bg-[#090c10] border border-border-default p-4 rounded-[2px] space-y-4">
+            <SvgLane
+              label="Branch A — Standard Line (No Gate)"
+              branchKey="A"
+              items={activeItems}
+              snapshot={baseline}
+              t={t}
+              highlightHazardAtCompactor={showHazardAlert}
+            />
+            <div className="border-t border-border-subtle/80" />
+            <SvgLane
+              label="Branch B — Loopgate Gated Policy"
+              branchKey="B"
+              items={activeItems}
+              snapshot={gated}
+              t={t}
+              highlightHazardAtCompactor={false}
+            />
+          </div>
 
       {/* Shared playback controls */}
       <div className="flex flex-wrap items-center gap-3">
@@ -550,7 +632,7 @@ export function ReplayTheatre({ items, className = '' }: ReplayTheatreProps) {
         <DeltaCell
           label="Compactor Escapes (hazard)"
           aVal={baseline.metrics.hazardHoldCount === 0 ? (baseline.decisions.filter(d => {
-            const it = items.find(i => i.id === d.itemId);
+            const it = activeItems.find(i => i.id === d.itemId);
             return it && it.primaryClass === 'hazardous' && d.route === 'compactor';
           }).length) : 0}
           bVal={0}
@@ -573,6 +655,8 @@ export function ReplayTheatre({ items, className = '' }: ReplayTheatreProps) {
           <ProvenanceChip provenance="Simulated" showPrefix={false} />
         </div>
       </div>
+        </>
+      )}
 
       {/* Audit Trail */}
       <div className="flex flex-col gap-3 border-t border-border-subtle pt-5">

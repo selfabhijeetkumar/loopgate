@@ -2,7 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Item, RouteId } from '@/domain/types';
-import { simulateBatch, type SimulationResult, type GatePolicy } from '@/engine';
+import {
+  simulateBatch,
+  type SimulationResult,
+  type GatePolicy,
+  createInitialQualityState,
+  updateQualityState,
+  type QualityState,
+} from '@/engine';
 import { SYNTHETIC_SCENARIO_ITEMS } from '@/data/scenario';
 import { SAFETY_FLOOR } from '@/engine/gate';
 import type { QualityTier } from '../world/qualityTier';
@@ -12,6 +19,7 @@ export type QualityMode = 'auto' | 'high' | 'medium' | 'low';
 export interface SimulationContextValue {
   items: Item[];
   activeSource: 'simulated' | 'photo';
+  photoItems: Item[] | null;
   loadPhotoScenario: (photoItems: Item[]) => void;
   restoreSimulatedScenario: () => void;
   strictnessPct: number;
@@ -87,10 +95,12 @@ export function SimulationProvider({
   }, []);
 
   const [items, setItems] = useState<Item[]>(initialItems);
+  const [photoItems, setPhotoItems] = useState<Item[] | null>(null);
   const [activeSource, setActiveSource] = useState<'simulated' | 'photo'>('simulated');
 
-  const loadPhotoScenario = useCallback((photoItems: Item[]) => {
-    setItems(photoItems);
+  const loadPhotoScenario = useCallback((newItems: Item[]) => {
+    setPhotoItems(newItems);
+    setItems(newItems);
     setActiveSource('photo');
     setOverrides({});
     setCurrentTime(0);
@@ -126,11 +136,38 @@ export function SimulationProvider({
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [activeChapter, setActiveChapter] = useState(0);
 
-  // Quality & FPS
+  // Quality & FPS with continuous 3-second < 45 FPS auto-downgrade
   const [qualityMode, setQualityMode] = useState<QualityMode>('auto');
   const [qualityTier, setQualityTier] = useState<QualityTier>('HIGH');
   const [fps, setFps] = useState(60);
   const [cameraResetKey, setCameraResetKey] = useState(0);
+
+  const qualityStateRef = useRef<QualityState>(createInitialQualityState(qualityTier, qualityMode));
+  const lastFpsTimeRef = useRef<number>(performance.now());
+
+  // Keep quality manager state in sync with manual mode / tier changes
+  useEffect(() => {
+    qualityStateRef.current.mode = qualityMode;
+    if (qualityMode !== 'auto') {
+      const t: QualityTier = qualityMode === 'high' ? 'HIGH' : qualityMode === 'medium' ? 'MEDIUM' : 'LOW';
+      qualityStateRef.current.tier = t;
+      qualityStateRef.current.consecutiveLowFpsMs = 0;
+      setQualityTier(t);
+    }
+  }, [qualityMode]);
+
+  const handleSetFps = useCallback((f: number) => {
+    setFps(f);
+    const now = performance.now();
+    const elapsed = Math.min(2000, Math.max(16, now - lastFpsTimeRef.current));
+    lastFpsTimeRef.current = now;
+
+    const result = updateQualityState(qualityStateRef.current, f, elapsed);
+    qualityStateRef.current = result.state;
+    if (result.downgraded && result.newTier) {
+      setQualityTier(result.newTier);
+    }
+  }, []);
 
   const triggerCameraReset = useCallback(() => {
     setCameraResetKey((k) => k + 1);
@@ -170,16 +207,10 @@ export function SimulationProvider({
     };
   }, [tick]);
 
-  // When quality mode is manual, enforce it
-  useEffect(() => {
-    if (qualityMode === 'high') setQualityTier('HIGH');
-    else if (qualityMode === 'medium') setQualityTier('MEDIUM');
-    else if (qualityMode === 'low') setQualityTier('LOW');
-  }, [qualityMode]);
-
   const value: SimulationContextValue = {
     items,
     activeSource,
+    photoItems,
     loadPhotoScenario,
     restoreSimulatedScenario,
     strictnessPct,
@@ -209,7 +240,7 @@ export function SimulationProvider({
     qualityMode,
     setQualityMode,
     fps,
-    setFps,
+    setFps: handleSetFps,
     cameraResetKey,
     triggerCameraReset,
   };
