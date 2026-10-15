@@ -20,5 +20,17 @@ See docs/PROJECT_BRIEF.md for full specification.
 - Stack: Next.js (App Router) + TypeScript + Tailwind + R3F + GSAP + Vitest + Zod (Zero Framer Motion)
 - Deploy: Vercel free tier
 
-## Status: FINALIZED (Phase 0 Corrections Applied)
-Phase 0 corrections finalized. Phase 1 scaffold, design system, and contracts may begin.
+## Status: FINALIZED (Phase 3 Active)
+Current Phase: Phase 3 (Styling Repair + Slider Repair + 3D Digital Twin)
+
+### Canonical Phase Order
+- **Phase 0:** Research, architecture, and markdown documentation (COMPLETED)
+- **Phase 1:** Next.js scaffold, Industrial HUD design tokens, domain contracts (COMPLETED)
+- **Phase 2:** Deterministic engine, test suite, and dev sandbox (COMPLETED & REPAIRED)
+- **Phase 3:** Styling repair + slider repair + 3D Digital Twin ("Sentinel Facility") (CURRENT)
+- **Phase 4:** Real CV + Evidence Lab
+- **Phase 5:** Replay Theatre + audit
+- **Phase 6:** Pages, legal, SEO, accessibility
+- **Phase 7:** GenAI + fallback
+- **Phase 8:** Security audit, deploy, PPT
+

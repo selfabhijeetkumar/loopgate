@@ -12,7 +12,7 @@
  * Pure TypeScript. Zero UI, zero network, zero Math.random.
  */
 
-import type { Item } from '../domain/types';
+import type { Item, RouteId } from '../domain/types';
 import type { GatePolicy } from './gate';
 import { simulateBatch, type BatchMetrics, type SimulationResult } from './sort';
 import { BatchValidationError } from './sort';
@@ -70,9 +70,10 @@ export function compareBranches(
   batch: Item[],
   policyA: GatePolicy,
   policyB: GatePolicy,
+  overridesB?: Record<string, RouteId>,
 ): CompareResult {
   const resultA = simulateBatch(batch, policyA);
-  const resultB = simulateBatch(batch, policyB);
+  const resultB = simulateBatch(batch, policyB, overridesB);
 
   const deltas: BranchDeltas = {
     expectedHazardExposureDelta:

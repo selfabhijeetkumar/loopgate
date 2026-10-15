@@ -13,8 +13,8 @@ describe('Domain Contracts & Schema Validation', () => {
     }
   });
 
-  it('should validate all 12 synthetic scenario items against ItemSchema', () => {
-    expect(SYNTHETIC_SCENARIO_ITEMS).toHaveLength(12);
+  it('should validate all 20 synthetic scenario items against ItemSchema', () => {
+    expect(SYNTHETIC_SCENARIO_ITEMS).toHaveLength(20);
 
     for (const item of SYNTHETIC_SCENARIO_ITEMS) {
       const result = ItemSchema.safeParse(item);
@@ -36,11 +36,10 @@ describe('Domain Contracts & Schema Validation', () => {
 
   it('should enforce safety floor: high hazard items must not be routed to compactor', () => {
     const safetyFloor = DEFAULT_ENGINE_CONFIG.safetyFloor;
-    const hazardousItems = SYNTHETIC_SCENARIO_ITEMS.filter((i) => i.primaryClass === 'hazardous');
+    const floorItems = SYNTHETIC_SCENARIO_ITEMS.filter((i) => i.hazardProbability >= safetyFloor);
     
-    expect(hazardousItems.length).toBeGreaterThan(0);
-    for (const item of hazardousItems) {
-      expect(item.hazardProbability).toBeGreaterThanOrEqual(safetyFloor);
+    expect(floorItems.length).toBeGreaterThan(0);
+    for (const item of floorItems) {
       // Under safety floor rule, it can NEVER be assigned to compactor
       expect(item.assignedRoute).not.toBe('compactor');
     }

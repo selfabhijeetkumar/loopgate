@@ -436,3 +436,100 @@ describe('Digital Twin Timeline', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// 10. Manual Overrides & Safety-Floor Defense
+// ---------------------------------------------------------------------------
+
+describe('Manual Overrides & Safety-Floor Defense', () => {
+  it('allows safe manual override of a non-floor item to inspection_line', () => {
+    const batch = cloneBatch(SYNTHETIC_SCENARIO_ITEMS);
+    // item-01 is PET bottle (p=0.02, normally recyclable_bay)
+    const baseResult = simulateBatch(batch, DEFAULT_GATE_POLICY);
+    const baseDec = baseResult.decisions.find((d) => d.itemId === 'item-01')!;
+    expect(baseDec.route).toBe('recyclable_bay');
+
+    const overriddenResult = simulateBatch(batch, DEFAULT_GATE_POLICY, {
+      'item-01': 'inspection_line',
+    });
+    const ovDec = overriddenResult.decisions.find((d) => d.itemId === 'item-01')!;
+    expect(ovDec.route).toBe('inspection_line');
+    expect(ovDec.overrideStatus).toBe('accepted');
+    expect(ovDec.reasonCode).toBe('OPERATOR_OVERRIDE_ACCEPTED');
+    expect(overriddenResult.metrics.inspectionLineCount).toBe(baseResult.metrics.inspectionLineCount + 1);
+  });
+
+  it('allows safe manual override of a non-floor item between standard lines', () => {
+    const batch = cloneBatch(SYNTHETIC_SCENARIO_ITEMS);
+    // item-04 is optical mouse (p=0.14, reusable_bay)
+    const overriddenResult = simulateBatch(batch, DEFAULT_GATE_POLICY, {
+      'item-04': 'inspection_line',
+    });
+    const ovDec = overriddenResult.decisions.find((d) => d.itemId === 'item-04')!;
+    expect(ovDec.route).toBe('inspection_line');
+    expect(ovDec.overrideStatus).toBe('accepted');
+  });
+
+  it('REFUSES unsafe manual override that attempts to send a floor-protected item to compactor stream', () => {
+    const batch = cloneBatch(SYNTHETIC_SCENARIO_ITEMS);
+    // item-09 is punctured external power bank (p=0.98 >= safetyFloor 0.30)
+    const overriddenResult = simulateBatch(batch, DEFAULT_GATE_POLICY, {
+      'item-09': 'recyclable_bay', // UNSAFE override to compactor stream!
+    });
+    const ovDec = overriddenResult.decisions.find((d) => d.itemId === 'item-09')!;
+    // Must refuse the override and retain safe route (hazard_hold)
+    expect(ovDec.route).toBe('hazard_hold');
+    expect(ovDec.overrideStatus).toBe('refused');
+    expect(ovDec.reasonCode).toBe('OVERRIDE_REFUSED_SAFETY_FLOOR');
+    expect(ovDec.explanation).toContain('refused');
+    expect(ovDec.explanation).toContain('safety floor');
+    // Escape count must remain 0
+    expect(overriddenResult.metrics.safetyFloorEscapeCount).toBe(0);
+  });
+
+  it('allows manual override of a floor-protected item between safe non-compactor routes', () => {
+    const batch = cloneBatch(SYNTHETIC_SCENARIO_ITEMS);
+    // item-09 is hazard_hold, operator diverts it to inspection_line for forensic verification
+    const overriddenResult = simulateBatch(batch, DEFAULT_GATE_POLICY, {
+      'item-09': 'inspection_line',
+    });
+    const ovDec = overriddenResult.decisions.find((d) => d.itemId === 'item-09')!;
+    expect(ovDec.route).toBe('inspection_line');
+    expect(ovDec.overrideStatus).toBe('accepted');
+    expect(overriddenResult.metrics.safetyFloorEscapeCount).toBe(0);
+  });
+
+  it('maintains strict determinism with manual overrides', () => {
+    const batch = cloneBatch(SYNTHETIC_SCENARIO_ITEMS);
+    const overrides = { 'item-01': 'inspection_line' as const, 'item-09': 'recyclable_bay' as const };
+    const run1 = simulateBatch(batch, DEFAULT_GATE_POLICY, overrides);
+    const run2 = simulateBatch(batch, DEFAULT_GATE_POLICY, overrides);
+
+    expect(run1.metrics).toEqual(run2.metrics);
+    expect(run1.decisions).toEqual(run2.decisions);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. Acceptance Test: Slider Sensitivity Across Scenario Range
+// ---------------------------------------------------------------------------
+
+describe('Slider Sensitivity Acceptance Test', () => {
+  it('yields at least 6 distinct inspectionLoad or exposure values across the slider range', () => {
+    const batch = cloneBatch(SYNTHETIC_SCENARIO_ITEMS);
+    const thresholds = [
+      0.05, 0.10, 0.15, 0.20, 0.22, 0.25, 0.27, 0.30, 0.32, 0.35, 0.40, 0.50, 0.60, 0.70, 0.80,
+    ];
+    const sweep = sweepThreshold(batch, { safetyFloor: 0.30, hazardConfidentCutoff: 0.75 }, thresholds);
+
+    const distinctInspectionLoads = new Set(sweep.map((p) => p.inspectionLoad.toFixed(2)));
+    const distinctExposures = new Set(sweep.map((p) => p.expectedHazardExposure.toFixed(3)));
+    const distinctInspectionCounts = new Set(sweep.map((p) => p.inspectionLineCount));
+
+    // Must yield at least 6 distinct values across the slider range
+    expect(distinctInspectionCounts.size).toBeGreaterThanOrEqual(6);
+    expect(distinctInspectionLoads.size).toBeGreaterThanOrEqual(6);
+    expect(distinctExposures.size).toBeGreaterThanOrEqual(6);
+  });
+});
+

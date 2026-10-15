@@ -70,7 +70,9 @@ export type ReasonCode =
   | 'FLOOR_CONFIDENT_HAZARD'    // Above floor, confident → hazard_hold
   | 'FLOOR_UNCERTAIN_HAZARD'    // Above floor, uncertain → inspection (ambiguous device)
   | 'GATE_ABOVE_THRESHOLD'      // Below floor but gate score too high → inspection
-  | 'AUTO_ROUTED_CLASS_BAY';    // Confident, low hazard → direct class stream
+  | 'AUTO_ROUTED_CLASS_BAY'     // Confident, low hazard → direct class stream
+  | 'OVERRIDE_REFUSED_SAFETY_FLOOR' // Operator override refused by safety floor
+  | 'OPERATOR_OVERRIDE_ACCEPTED';   // Operator override accepted
 
 /**
  * Compute the gate score and routing decision for a single item.

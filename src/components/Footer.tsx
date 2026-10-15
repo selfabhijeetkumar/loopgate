@@ -16,7 +16,7 @@ export function Footer() {
               <span className="text-text-muted text-[10px]">DSU Code Clash 2.0 (PS06)</span>
             </div>
             <p className="text-text-muted text-[11px] max-w-md font-sans">
-              Smart recycling sorting assistant and digital twin preventing compactor battery fires.
+              Routes risky waste before it reaches the compactor. Simulated estimates.
             </p>
           </div>
 

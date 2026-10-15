@@ -17,9 +17,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Loopgate | Smart Recycling & Battery Fire Prevention Gate',
+  title: 'Loopgate | Smart Recycling & Waste Uncertainty Gate',
   description:
-    'Computer vision sorting assistant, uncertainty gate, and connected 3D digital twin preventing catastrophic compactor battery fires in municipal waste streams.',
+    'Computer vision sorting assistant, uncertainty gate, and connected 3D digital twin. Routes risky waste before it reaches the compactor. Simulated estimates.',
   icons: {
     icon: '/icon.svg',
   },

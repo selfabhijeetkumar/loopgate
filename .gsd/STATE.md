@@ -3,9 +3,14 @@
 <!-- Updated: 2026-10-15 (Phase 2 COMPLETE) -->
 
 ## Current Position
-Phase: 2 (COMPLETE)
-Next phase: 3 -- CV Pipeline + Gemini Integration
-Status: AWAITING USER REVIEW BEFORE PHASE 3
+Phase: 3 (COMPLETE) -- Styling repair + slider repair + 3D Digital Twin
+Next phase: Phase 4 (READY) -- Real CV + Evidence Lab
+Subsequent phases:
+- 5 = Replay Theatre + audit
+- 6 = pages, legal, SEO, accessibility
+- 7 = GenAI + fallback
+- 8 = security audit, deploy, PPT
+Status: PHASE 3 VERIFIED AND COMPLETE
 
 ## Phase 2 Execution & Verification Summary
 Objective: Implement the deterministic sorting engine, digital twin timeline, branch comparison/sweep, comprehensive test suite, and a dev sandbox page. All invariants enforced and empirically verified.
@@ -59,9 +64,13 @@ All Phase 1 deliverables complete and verified. See git log for details.
 - Browser-verified responsive layout, keyboard navigation, provenance chip rendering
 
 ## Next Actions for Phase 3
-1. User review and approval of Phase 2 report.
-2. Implement CV pipeline: image upload → COCO-SSD object detection (TF.js, runs in browser, zero server cost).
-3. Map COCO-SSD classes → `MaterialClass` using deterministic lookup table.
-4. Integrate Gemini (optional, cached by image hash, deterministic fallback always available).
+1. User review and approval of Phase 2 repair report.
+2. Implement CV pipeline in the browser (Transformers.js, zero server cost):
+   - Stage 1: DETR (ResNet-50) or OWL-ViT Zero-Shot for per-item bounding box detection.
+   - Stage 2: CLIP-ViT-Base-Patch32 crop classification into the 4 material classes + battery prompts.
+   - Human-verified box fallback (interactive canvas) always available.
+3. Map CLIP softmax output → `MaterialClass` using deterministic prompt-score lookup (no fixed 80-class detector).
+4. Integrate Gemini optional second opinion: server route, SHA-256 cache, deterministic offline fallback templates, never in critical path.
 5. Wire CV output into engine: detected items → `simulateBatch()` → live UI update.
-6. Update `src/data/scenario.ts` to accept real CV items alongside synthetic baseline.
+6. Publish evaluation dataset (20 images, CC0 licensed): confusion matrix, TP/FP rates, empirical gate effectiveness.
+

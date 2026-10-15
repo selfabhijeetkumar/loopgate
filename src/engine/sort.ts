@@ -55,14 +55,12 @@ export interface ItemDecision {
   explanation: string;
   /** Whether the safety floor rule was triggered. */
   safetyFloorTriggered: boolean;
-  /**
-   * Residual hazard risk after this item's disposition:
-   * - For items at compactor bays: hazardProbability * compactionIgnitionFactor
-   * - For items at inspection_line: hazardProbability * (1 - inspectionAccuracy)
-   * - For items at hazard_hold: 0 (quarantined)
-   * Provenance: Calculated
-   */
+  /** Residual hazard risk after this item's disposition */
   residualRisk: number;
+  /** Status of operator override for this item, if one was provided. */
+  overrideStatus?: 'accepted' | 'refused' | 'none';
+  /** The route requested by the operator override, if any. */
+  overrideRequestedRoute?: RouteId;
 }
 
 /** A single event in the digital twin timeline. */
@@ -165,7 +163,11 @@ export interface SimulationResult {
  * @param policy GatePolicy (safetyFloor, hazardConfidentCutoff, inspectionThreshold).
  * @throws BatchValidationError if batch is empty, oversized, or contains invalid items.
  */
-export function simulateBatch(batch: Item[], policy: GatePolicy): SimulationResult {
+export function simulateBatch(
+  batch: Item[],
+  policy: GatePolicy,
+  overrides?: Record<string, RouteId>,
+): SimulationResult {
   // Validate input
   const parsed = BatchInputSchema.safeParse(batch);
   if (!parsed.success) {
@@ -203,9 +205,34 @@ export function simulateBatch(batch: Item[], policy: GatePolicy): SimulationResu
     };
 
     const decision = evaluateGate(gateInput, policy);
+    let finalRoute = decision.route;
+    let reasonCode = decision.reasonCode;
+    let explanation = decision.explanation;
+    let overrideStatus: 'accepted' | 'refused' | 'none' = 'none';
+    const requestedOverride = overrides?.[item.id];
+
+    if (requestedOverride) {
+      const isFloorItem = item.hazardProbability >= policy.safetyFloor;
+      const isCompactorStream =
+        requestedOverride === 'recyclable_bay' ||
+        requestedOverride === 'biodegradable_bay' ||
+        requestedOverride === 'compactor';
+
+      if (isFloorItem && isCompactorStream) {
+        // SAFETY FLOOR INVARIANT: An override can NEVER push a floor item into the compactor stream
+        overrideStatus = 'refused';
+        reasonCode = 'OVERRIDE_REFUSED_SAFETY_FLOOR';
+        explanation = `Override to ${requestedOverride} refused: Item hazard probability ${(item.hazardProbability * 100).toFixed(1)}% meets or exceeds the safety floor ${(policy.safetyFloor * 100).toFixed(0)}%. Compaction barred.`;
+      } else {
+        overrideStatus = 'accepted';
+        finalRoute = requestedOverride;
+        reasonCode = 'OPERATOR_OVERRIDE_ACCEPTED';
+        explanation = `Operator manual override accepted: routed to ${requestedOverride}.`;
+      }
+    }
 
     // Compute residual risk for this item's disposition
-    const residualRisk = computeResidualRisk(item.hazardProbability, decision.route);
+    const residualRisk = computeResidualRisk(item.hazardProbability, finalRoute);
 
     decisions.push({
       itemId: item.id,
@@ -213,22 +240,24 @@ export function simulateBatch(batch: Item[], policy: GatePolicy): SimulationResu
       hazardProbability: item.hazardProbability,
       gateScore: decision.gateScore,
       uncertainty: decision.uncertainty,
-      route: decision.route,
-      reasonCode: decision.reasonCode,
-      explanation: decision.explanation,
+      route: finalRoute,
+      reasonCode,
+      explanation,
       safetyFloorTriggered: decision.safetyFloorTriggered,
       residualRisk,
+      overrideStatus,
+      overrideRequestedRoute: requestedOverride,
     });
 
     // Tick timeline: intake → scanning → uncertainty_gate → diverting → routed
-    ticks.push({ t, itemId: item.id, stage: 'intake', route: decision.route, label: 'INTAKE' });
-    ticks.push({ t: t + 1, itemId: item.id, stage: 'scanning', route: decision.route, label: 'SCAN' });
-    ticks.push({ t: t + 2, itemId: item.id, stage: 'uncertainty_gate', route: decision.route, label: 'GATE' });
-    ticks.push({ t: t + 3, itemId: item.id, stage: 'diverting', route: decision.route, label: 'DIVERT' });
-    ticks.push({ t: t + 4, itemId: item.id, stage: 'routed', route: decision.route, label: decision.route.toUpperCase() });
+    ticks.push({ t, itemId: item.id, stage: 'intake', route: finalRoute, label: 'INTAKE' });
+    ticks.push({ t: t + 1, itemId: item.id, stage: 'scanning', route: finalRoute, label: 'SCAN' });
+    ticks.push({ t: t + 2, itemId: item.id, stage: 'uncertainty_gate', route: finalRoute, label: 'GATE' });
+    ticks.push({ t: t + 3, itemId: item.id, stage: 'diverting', route: finalRoute, label: 'DIVERT' });
+    ticks.push({ t: t + 4, itemId: item.id, stage: 'routed', route: finalRoute, label: finalRoute.toUpperCase() });
 
     // Accumulate route counts
-    routeCounts.set(decision.route, (routeCounts.get(decision.route) ?? 0) + 1);
+    routeCounts.set(finalRoute, (routeCounts.get(finalRoute) ?? 0) + 1);
   }
 
   const metrics = computeMetrics(batch.length, decisions, routeCounts, policy);

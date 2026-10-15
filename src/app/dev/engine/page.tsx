@@ -28,7 +28,7 @@ import type { SweepPoint } from '@/engine';
 import type { ItemDecision } from '@/engine';
 import type { EngineAssumption } from '@/engine';
 
-const SWEEP_THRESHOLDS = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0];
+const SWEEP_THRESHOLDS = [0.05, 0.10, 0.15, 0.20, 0.22, 0.25, 0.27, 0.30, 0.32, 0.35, 0.40, 0.50, 0.60, 0.70, 0.80];
 
 function fmt(n: number, decimals = 3): string {
   return n.toFixed(decimals);
@@ -39,7 +39,11 @@ function fmtPct(n: number): string {
 }
 
 export default function DevEnginePage() {
-  const [tau, setTau] = useState(DEFAULT_GATE_POLICY.inspectionThreshold);
+  // Strictness in [0, 100]%: maps inversely to useful threshold range [0.50, 0.10]
+  const [strictness, setStrictness] = useState<number>(50); // default 50% strictness -> tau = 0.30
+
+  // tau mapped from strictness: 0% strictness -> 0.50 (balanced), 100% strictness -> 0.10 (hyper-paranoid)
+  const tau = Number((0.50 - (strictness / 100) * 0.40).toFixed(3));
 
   // Live policy for the slider preview
   const livePolicy = useMemo(
@@ -97,9 +101,8 @@ export default function DevEnginePage() {
           Gate Engine: Branch Comparison + Threshold Sweep
         </h1>
         <p className="text-sm text-text-secondary font-sans max-w-3xl">
-          Runs the 12-item Simulated scenario through the deterministic engine.
-          All numbers are engine outputs carrying a Calculated provenance chip.
-          No real-world measurements. Not rendered in production builds.
+          Runs the 20-item Simulated scenario through the deterministic engine. All numbers are engine outputs
+          carrying a Calculated provenance chip. Routes risky waste before it reaches the compactor. Simulated estimates. Not rendered in production builds.
         </p>
         <div className="flex gap-3 flex-wrap">
           <ProvenanceChip provenance="Calculated" />
@@ -119,8 +122,8 @@ export default function DevEnginePage() {
             Baseline (No Gate) vs Gated Policy
           </h2>
           <p className="text-xs text-text-secondary font-sans">
-            Same 12-item batch, two different policies. Deltas = gated minus baseline.
-            Negative exposure delta confirms the gate reduces compactor fire risk.
+            Same batch, two different policies. Deltas = gated minus baseline.
+            Negative exposure delta in this simulated scenario indicates lower compactor hazard exposure.
           </p>
         </div>
 
@@ -215,45 +218,45 @@ export default function DevEnginePage() {
       <section className="space-y-4">
         <div className="space-y-1">
           <div className="text-xs font-mono uppercase tracking-widest text-amber-500">
-            Live Threshold Slider // tau = inspectionThreshold
+            Live Threshold Slider // Inspection Strictness
           </div>
           <h2 className="text-lg font-display font-bold text-text-primary">
-            Adjust Gate Sensitivity
+            Adjust Gate Strictness
           </h2>
           <p className="text-xs text-text-secondary font-sans">
             The safety floor ({fmtPct(DEFAULT_GATE_POLICY.safetyFloor)}) is fixed.
-            Only the inspectionThreshold (tau) changes. Higher tau means fewer items go to
-            inspection (more risk accepted for below-floor items). The slider is alive when
-            moving it changes inspectionLoad.
+            Strictness controls the gate sensitivity (0% = baseline balanced, 100% = maximum diversion).
+            Mapped onto the active threshold range [0.50, 0.10]. Every part of the slider changes engine outputs.
           </p>
         </div>
 
         <div className="border border-border-subtle bg-bg-surface rounded-[2px] p-6 space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label htmlFor="tau-slider" className="text-xs font-mono text-text-secondary">
-                tau (inspectionThreshold)
+              <label htmlFor="strictness-slider" className="text-xs font-mono text-text-secondary">
+                Inspection Strictness: <span className="text-amber-400 font-bold">{strictness}%</span>
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-mono font-bold text-amber-500">
-                  {tau.toFixed(2)}
+                <span className="text-xs font-mono bg-bg-primary px-2 py-0.5 border border-border-subtle text-amber-500">
+                  tau = {tau.toFixed(3)}
                 </span>
-                <ProvenanceChip provenance="Configured" showPrefix={false} />
+                <ProvenanceChip provenance="Calculated" showPrefix={false} />
               </div>
             </div>
             <input
-              id="tau-slider"
+              id="strictness-slider"
               type="range"
               min="0"
-              max="1"
-              step="0.01"
-              value={tau}
-              onChange={(e) => setTau(parseFloat(e.target.value))}
+              max="100"
+              step="1"
+              value={strictness}
+              onChange={(e) => setStrictness(parseInt(e.target.value, 10))}
               className="w-full accent-amber-500 cursor-pointer"
             />
             <div className="flex justify-between text-[10px] font-mono text-text-muted">
-              <span>0.0 (max inspection)</span>
-              <span>1.0 (no inspection)</span>
+              <span>0% Strictness (tau = 0.50, minimal load)</span>
+              <span>50% (tau = 0.30, optimal)</span>
+              <span>100% Strictness (tau = 0.10, max inspection)</span>
             </div>
           </div>
 

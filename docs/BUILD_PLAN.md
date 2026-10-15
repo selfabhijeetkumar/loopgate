@@ -9,14 +9,14 @@
 | Phase | Name | Duration | Window | Priority |
 |-------|------|----------|--------|----------|
 | 0 | Research + Docs (done) | 3h | 15 Oct 07:00-10:00 | P0 |
-| 1 | Scaffold + Design System | 2h | 15 Oct 10:00-12:00 | P1 |
-| 2 | Deterministic Engine + Tests | 2h | 15 Oct 12:00-14:00 | P1 |
-| 3 | CV + Uncertainty Gate + Eval | 3h | 15 Oct 14:00-17:00 | P1 |
-| 4 | Replay + Audit Trail | 2h | 15 Oct 17:00-19:00 | P1 |
-| 5 | 3D Digital Twin | 3h | 15 Oct 19:00-22:00 | P1 |
-| 6 | Pages + SEO + Accessibility | 2.5h | 15 Oct 22:00-00:30 | P1 |
-| 7 | GenAI + Fallback + Personas | 2h | 16 Oct 00:30-02:30 | P1 |
-| 8 | Integration + Security + Deploy | 3h | 16 Oct 02:30-05:30 | P1 |
+| 1 | Scaffold + Design System (done) | 2h | 15 Oct 10:00-12:00 | P1 |
+| 2 | Deterministic Engine + Tests (done) | 2h | 15 Oct 12:00-14:00 | P1 |
+| 3 | Styling Repair + Slider Repair + 3D Digital Twin | 3h | 15 Oct 14:00-17:00 | P1 |
+| 4 | Real CV + Evidence Lab | 3h | 15 Oct 17:00-20:00 | P1 |
+| 5 | Replay Theatre + Audit | 2h | 15 Oct 20:00-22:00 | P1 |
+| 6 | Pages + Legal + SEO + Accessibility | 2.5h | 15 Oct 22:00-00:30 | P1 |
+| 7 | GenAI + Fallback | 2h | 16 Oct 00:30-02:30 | P1 |
+| 8 | Security Audit + Deploy + PPT | 3h | 16 Oct 02:30-05:30 | P1 |
 | -- | Night buffer / sleep buffer | 5h | 16 Oct 05:30-10:30 | buffer |
 | -- | PPT + Demo script | 3h | 16 Oct 10:30-13:30 | P1 |
 | -- | Final polish + submission | 3h | 16 Oct 13:30-16:30 | P1 |
