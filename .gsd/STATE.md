@@ -1,16 +1,57 @@
 # STATE.md -- Loopgate Project State
 <!-- GSD Session Memory -->
-<!-- Updated: 2026-10-15 (Phase 3C COMPLETE) -->
+<!-- Updated: 2026-10-16 (Phase 4 Repair + Phase 5 COMPLETE) -->
 
 ## Current Position
-Phase: 3C (COMPLETE) -- Cinematic 3D World, Single WebGL Canvas, Scroll-Driven Camera & Quality Tiers
-Next phase: Phase 4 (READY) -- Real In-Browser CV Pipeline & Evidence Lab
+Phase: Phase 4 Repair + Phase 5 (COMPLETE) -- Real CV Pipeline Integrity, Honest Fallback, 5-Box Sanity Mapping, Dual-Lane SVG Replay Theatre, Typed Audit Trail Engine
+Next phase: Phase 6 (READY) -- Dedicated Pages, Legal / Compliance, SEO & Accessibility (WCAG 2.1 AA)
 Subsequent phases:
-- 5 = Replay Theatre + audit
-- 6 = pages, legal, SEO, accessibility
-- 7 = GenAI + fallback
-- 8 = security audit, deploy, PPT
-Status: PHASE 3C VERIFIED AND COMPLETE
+- 7 = GenAI second-opinion + deterministic fallback
+- 8 = End-to-end security audit, deployment, pitch presentation
+Status: PHASE 4 REPAIR + PHASE 5 VERIFIED AND COMPLETE
+
+## Phase 4 Repair + Phase 5 Execution & Verification Summary
+Objective: Repair CV pipeline CSP and honest error handling, fix 2D schematic and camera viewport, enforce safety floor for detector-labeled hazardous objects, and build the Dual-Lane Replay Theatre (Standard Line vs Loopgate Gated Policy) with side-by-side calculated metrics and localStorage persistent Audit Trail.
+
+### Completed Deliverables
+1. **CSP Repair (`next.config.ts`)**:
+   - Added `blob:` to `connect-src` (for Next.js worker bundle fetches) and `*.huggingface.co` wildcard for LFS CDN shards.
+   - Zero CSP errors in browser console during page loads and asset operations.
+
+2. **Honest Fallback (`src/cv/pipeline.ts`)**:
+   - Completely eliminated synthetic fake detections (`bottle 78%, power bank 84%`).
+   - Implemented designed error state when model weights are not downloadable in constrained environments.
+   - Preserved manual box drawing (Human-verified) and simulated scenario.
+
+3. **Hazard Safety Floor in `toItems.ts` (`src/cv/toItems.ts`)**:
+   - Fixed potential escape mode where an item detected as `power bank` with 84% confidence could be assigned 5% hazard if CLIP crop was confused.
+   - Enforced `SAFETY_FLOOR` (0.30) for all items where `expectedClass === 'hazardous'`, guaranteeing they trigger the gate and divert to `inspection_line`.
+   - Verified via unit test `cv.test.ts` and empirical 5-box sanity test.
+
+4. **Replay Theatre (`src/components/replay/ReplayTheatre.tsx`, `ReplayClient.tsx`)**:
+   - Dual-lane SVG visualization driven by pure engine timeline: Branch A (Standard Line, No Gate) vs Branch B (Loopgate Gated Policy).
+   - Amber warning highlight at compactor when hazardous items reach it in Branch A.
+   - Diverter drop animation in Branch B routing hazardous/uncertain items to Diverted / Inspection bay.
+   - Shared transport controls: Play/Pause/Restart and scrubber driving both branches synchronously. Keyboard shortcuts (Space, R).
+   - Side-by-side calculated metrics with `Calculated` chips: Expected Hazard Exposure, Inspection Load, Throughput, Compactor Escapes, Safety Floor Triggers.
+
+5. **Audit Trail Engine (`src/engine/audit.ts`)**:
+   - Typed audit events for manual diverts, standard line dispatches, safety floor refusals, and human corrections.
+   - Reverse-chronological audit log table with Item ID, Action, Reason Code, and Provenance.
+   - LocalStorage persistence with try/catch, Copy to Clipboard CSV export, and 2-step confirmation dialog for "Clear Log".
+   - 11 unit tests in `src/__tests__/audit.test.ts`.
+
+6. **Responsive & Mobile Viewport**:
+   - Mobile 360px layout tested with horizontal scroll container for SVG lanes (`min-w-[480px]`) and stacked responsive metric cards.
+
+### Empirical Verification Results
+- **TypeScript**: `npx tsc --noEmit` ✅ 0 errors
+- **ESLint**: `npm run lint` ✅ 0 warnings/errors
+- **Vitest**: `npm test` ✅ **71/71 tests pass** (6 test suites)
+- **Production Build**: `npm run build` ✅ Exit 0, 9 static & dynamic routes compiled
+- **Security Audit**: `npm audit` ✅ 0 vulnerabilities (npmjs.org official registry)
+- **Secret Scan**: Clean; 0 credentials or secrets in code or commits
+- **Git Commit**: `feat(phase4-repair-phase5): CV pipeline CSP repair, honest fallback, 5-box sanity floor, Replay Theatre, and Audit Trail`
 
 ## Phase 3C Execution & Verification Summary
 Objective: Build the cinematic 3D world as a single full-viewport React-Three-Fiber WebGL canvas behind all content, driven by GSAP ScrollTrigger across 6 keyframed chapters with native scrolling, 3D cursor probe, floor spotlight and acoustic ripple shader, auto-downgrading quality tiers, and zero boxed duplicate viewports.
