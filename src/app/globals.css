@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+:root {
+  /* Industrial HUD Theme Tokens: Dark Default */
+  --bg-primary: #0d0f11;
+  --bg-surface: #14181c;
+  --bg-surface-elevated: #1a2026;
+  --border-subtle: #242c35;
+  --border-strong: #384452;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  /* ONE Signal Color: Amber used strictly for Hazard / Quarantine Alert */
+  --signal-hazard: #f59e0b;
+  --signal-hazard-bg: rgba(245, 158, 11, 0.12);
+  --signal-hazard-border: rgba(245, 158, 11, 0.40);
+
+  /* Safe neutral accents */
+  --accent-neutral: #334155;
+  --accent-neutral-border: #475569;
+}
+
+[data-theme="light"] {
+  /* Industrial HUD Companion Light Theme */
+  --bg-primary: #f4f6f8;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #e9ecef;
+  --border-subtle: #d0d7de;
+  --border-strong: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  
+  --signal-hazard: #d97706;
+  --signal-hazard-bg: rgba(217, 119, 6, 0.14);
+  --signal-hazard-border: rgba(217, 119, 6, 0.45);
+
+  --accent-neutral: #cbd5e1;
+  --accent-neutral-border: #94a3b8;
+}
+
+@theme inline {
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-elevated: var(--bg-surface-elevated);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-signal-hazard: var(--signal-hazard);
+  --color-signal-hazard-bg: var(--signal-hazard-bg);
+  --color-signal-hazard-border: var(--signal-hazard-border);
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
+}
+
+html {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Accessible visible focus states */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--signal-hazard);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion Safety */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
