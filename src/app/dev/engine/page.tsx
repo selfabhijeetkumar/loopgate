@@ -28,7 +28,7 @@ import type { SweepPoint } from '@/engine';
 import type { ItemDecision } from '@/engine';
 import type { EngineAssumption } from '@/engine';
 
-const SWEEP_THRESHOLDS = [0.05, 0.10, 0.15, 0.20, 0.22, 0.25, 0.27, 0.30, 0.32, 0.35, 0.40, 0.50, 0.60, 0.70, 0.80];
+const SWEEP_THRESHOLDS = [0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.44, 0.48];
 
 function fmt(n: number, decimals = 3): string {
   return n.toFixed(decimals);
@@ -39,11 +39,11 @@ function fmtPct(n: number): string {
 }
 
 export default function DevEnginePage() {
-  // Strictness in [0, 100]%: maps inversely to useful threshold range [0.50, 0.10]
-  const [strictness, setStrictness] = useState<number>(50); // default 50% strictness -> tau = 0.30
+  // Strictness in [0, 100]%: maps inversely to useful threshold range [0.48, 0.08]
+  const [strictness, setStrictness] = useState<number>(50); // default 50% strictness -> tau = 0.28
 
-  // tau mapped from strictness: 0% strictness -> 0.50 (balanced), 100% strictness -> 0.10 (hyper-paranoid)
-  const tau = Number((0.50 - (strictness / 100) * 0.40).toFixed(3));
+  // tau mapped from strictness: 0% strictness -> 0.48 (balanced), 100% strictness -> 0.08 (hyper-paranoid)
+  const tau = Number((0.48 - (strictness / 100) * 0.40).toFixed(3));
 
   // Live policy for the slider preview
   const livePolicy = useMemo(

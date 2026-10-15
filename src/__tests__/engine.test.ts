@@ -14,7 +14,11 @@
 
 import { describe, it, expect } from 'vitest';
 import type { Item } from '../domain/types';
-import { SYNTHETIC_SCENARIO_ITEMS } from '../data/scenario';
+import {
+  SYNTHETIC_SCENARIO_ITEMS,
+  DEFAULT_ENGINE_CONFIG,
+  DEFAULT_ASSUMPTIONS,
+} from '../data/scenario';
 import {
   simulateBatch,
   BatchValidationError,
@@ -26,6 +30,7 @@ import {
 } from '../engine/compare';
 import {
   DEFAULT_GATE_POLICY,
+  SAFETY_FLOOR,
 } from '../engine/gate';
 import { ASM } from '../engine/assumptions';
 import { buildTwinTimeline } from '../engine/twin';
@@ -531,5 +536,71 @@ describe('Slider Sensitivity Acceptance Test', () => {
     expect(distinctInspectionLoads.size).toBeGreaterThanOrEqual(6);
     expect(distinctExposures.size).toBeGreaterThanOrEqual(6);
   });
+
+  it('every 10% step of strictness (0% to 100%) changes at least one number', () => {
+    const batch = cloneBatch(SYNTHETIC_SCENARIO_ITEMS);
+    const policy = { safetyFloor: 0.30, hazardConfidentCutoff: 0.85 };
+    const strictnessSteps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const results = strictnessSteps.map((pct) => {
+      const tau = +(0.48 - (pct / 100) * 0.40).toFixed(3);
+      const pt = sweepThreshold(batch, policy, [tau])[0];
+      return {
+        pct,
+        tau,
+        diverted: pt.inspectionLineCount + pt.hazardHoldCount,
+        inspection: pt.inspectionLineCount,
+        exposure: pt.expectedHazardExposure,
+      };
+    });
+
+    for (let i = 1; i < results.length; i++) {
+      const prev = results[i - 1];
+      const curr = results[i];
+      // Every 10% step must either increase diverted items or decrease residual exposure
+      const divertedChanged = curr.diverted !== prev.diverted;
+      const exposureChanged = curr.exposure !== prev.exposure;
+      expect(divertedChanged || exposureChanged).toBe(true);
+      // In fact, diverted count monotonically increases and exposure monotonically decreases
+      expect(curr.diverted).toBeGreaterThan(prev.diverted);
+      expect(curr.exposure).toBeLessThan(prev.exposure);
+    }
+  });
 });
 
+// ---------------------------------------------------------------------------
+// 12. Acceptance Tests: Phase 3C Single-Source Safety Floor & Slider Labels
+// ---------------------------------------------------------------------------
+
+describe('Phase 3C Verification: Single-Source Safety Floor & Slider Labels', () => {
+  it('enforces SAFETY_FLOOR as the single source of truth across policy and assumptions', () => {
+    // 1. gate constant
+    expect(SAFETY_FLOOR).toBe(0.30);
+
+    // 2. default gate policy
+    expect(DEFAULT_GATE_POLICY.safetyFloor).toBe(SAFETY_FLOOR);
+
+    // 3. default engine config
+    expect(DEFAULT_ENGINE_CONFIG.safetyFloor).toBe(SAFETY_FLOOR);
+
+    // 4. scenario assumption asm-04
+    const asm04 = DEFAULT_ASSUMPTIONS.find((a) => a.id === 'asm-04');
+    expect(asm04).toBeDefined();
+    expect(asm04?.value).toBe(SAFETY_FLOOR);
+    expect(asm04?.description).toContain(`${SAFETY_FLOOR}`);
+
+    // 5. verify no assumption has stale 0.25
+    const stale025 = DEFAULT_ASSUMPTIONS.find((a) => a.value === 0.25);
+    expect(stale025).toBeUndefined();
+  });
+
+  it('computes slider labels from the exact tau mapping formula', () => {
+    const tauMap = (pct: number) => +(0.48 - (pct / 100) * 0.40).toFixed(3);
+
+    // 0% (Max Throughput) -> 0.480
+    expect(tauMap(0)).toBe(0.480);
+    // 50% (Balanced) -> 0.280 (not the old wrong 0.300)
+    expect(tauMap(50)).toBe(0.280);
+    // 100% (Max Inspection) -> 0.080 (not the old wrong 0.100)
+    expect(tauMap(100)).toBe(0.080);
+  });
+});

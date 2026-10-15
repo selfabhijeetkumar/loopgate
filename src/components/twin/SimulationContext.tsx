@@ -1,0 +1,197 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import type { Item, RouteId } from '@/domain/types';
+import { simulateBatch, type SimulationResult, type GatePolicy } from '@/engine';
+import { SYNTHETIC_SCENARIO_ITEMS } from '@/data/scenario';
+import { SAFETY_FLOOR } from '@/engine/gate';
+import type { QualityTier } from '../world/qualityTier';
+
+export type QualityMode = 'auto' | 'high' | 'medium' | 'low';
+
+export interface SimulationContextValue {
+  items: Item[];
+  strictnessPct: number;
+  setStrictnessPct: (val: number) => void;
+  tau: number;
+  overrides: Record<string, RouteId>;
+  setOverrides: React.Dispatch<React.SetStateAction<Record<string, RouteId>>>;
+  setOverrideForItem: (itemId: string, route: RouteId) => void;
+  clearOverrideForItem: (itemId: string) => void;
+  policy: GatePolicy;
+  simulationResult: SimulationResult;
+  currentTime: number;
+  setCurrentTime: React.Dispatch<React.SetStateAction<number>>;
+  isPlaying: boolean;
+  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  playbackSpeed: 0.5 | 1.0 | 2.0;
+  setPlaybackSpeed: (speed: 0.5 | 1.0 | 2.0) => void;
+  selectedItemId: string | null;
+  setSelectedItemId: (id: string | null) => void;
+  hoveredItemId: string | null;
+  setHoveredItemId: (id: string | null) => void;
+  maxDuration: number;
+  activeChapter: number;
+  setActiveChapter: (ch: number) => void;
+  qualityTier: QualityTier;
+  setQualityTier: (t: QualityTier) => void;
+  qualityMode: QualityMode;
+  setQualityMode: (m: QualityMode) => void;
+  fps: number;
+  setFps: (f: number) => void;
+  cameraResetKey: number;
+  triggerCameraReset: () => void;
+}
+
+const SimulationContext = createContext<SimulationContextValue | null>(null);
+
+export function useSimulation(): SimulationContextValue {
+  const ctx = useContext(SimulationContext);
+  if (!ctx) {
+    throw new Error('useSimulation must be used within a SimulationProvider');
+  }
+  return ctx;
+}
+
+interface SimulationProviderProps {
+  initialItems?: Item[];
+  children: React.ReactNode;
+}
+
+export function SimulationProvider({
+  initialItems = SYNTHETIC_SCENARIO_ITEMS,
+  children,
+}: SimulationProviderProps) {
+  // Strictness & Tau mapping
+  const [strictnessPct, setStrictnessPct] = useState(50);
+  const tau = useMemo(() => {
+    return +(0.48 - (strictnessPct / 100) * 0.40).toFixed(3);
+  }, [strictnessPct]);
+
+  // Manual overrides
+  const [overrides, setOverrides] = useState<Record<string, RouteId>>({});
+
+  const setOverrideForItem = useCallback((itemId: string, route: RouteId) => {
+    setOverrides((prev) => ({ ...prev, [itemId]: route }));
+  }, []);
+
+  const clearOverrideForItem = useCallback((itemId: string) => {
+    setOverrides((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+  }, []);
+
+  // Policy & simulation result
+  const policy: GatePolicy = useMemo(() => {
+    return {
+      safetyFloor: SAFETY_FLOOR,
+      hazardConfidentCutoff: 0.85,
+      inspectionThreshold: tau,
+    };
+  }, [tau]);
+
+  const simulationResult = useMemo(() => {
+    return simulateBatch(initialItems, policy, overrides);
+  }, [initialItems, policy, overrides]);
+
+  // Timeline & playback
+  const [currentTime, setCurrentTime] = useState(0.0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState<0.5 | 1.0 | 2.0>(1.0);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [activeChapter, setActiveChapter] = useState(0);
+
+  // Quality & FPS
+  const [qualityMode, setQualityMode] = useState<QualityMode>('auto');
+  const [qualityTier, setQualityTier] = useState<QualityTier>('HIGH');
+  const [fps, setFps] = useState(60);
+  const [cameraResetKey, setCameraResetKey] = useState(0);
+
+  const triggerCameraReset = useCallback(() => {
+    setCameraResetKey((k) => k + 1);
+  }, []);
+
+  const maxDuration = useMemo(() => {
+    return initialItems.length * 2.0 + 6.0;
+  }, [initialItems.length]);
+
+  // Ticking loop for simulation time
+  const lastTimeRef = useRef<number>(performance.now());
+  const rafIdRef = useRef<number | null>(null);
+
+  const tick = useCallback(() => {
+    const now = performance.now();
+    const delta = (now - lastTimeRef.current) / 1000;
+    lastTimeRef.current = now;
+
+    if (isPlaying) {
+      setCurrentTime((prev) => {
+        const next = prev + delta * playbackSpeed;
+        if (next >= maxDuration) {
+          return 0.0;
+        }
+        return next;
+      });
+    }
+
+    rafIdRef.current = requestAnimationFrame(tick);
+  }, [isPlaying, playbackSpeed, maxDuration]);
+
+  useEffect(() => {
+    lastTimeRef.current = performance.now();
+    rafIdRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, [tick]);
+
+  // When quality mode is manual, enforce it
+  useEffect(() => {
+    if (qualityMode === 'high') setQualityTier('HIGH');
+    else if (qualityMode === 'medium') setQualityTier('MEDIUM');
+    else if (qualityMode === 'low') setQualityTier('LOW');
+  }, [qualityMode]);
+
+  const value: SimulationContextValue = {
+    items: initialItems,
+    strictnessPct,
+    setStrictnessPct,
+    tau,
+    overrides,
+    setOverrides,
+    setOverrideForItem,
+    clearOverrideForItem,
+    policy,
+    simulationResult,
+    currentTime,
+    setCurrentTime,
+    isPlaying,
+    setIsPlaying,
+    playbackSpeed,
+    setPlaybackSpeed,
+    selectedItemId,
+    setSelectedItemId,
+    hoveredItemId,
+    setHoveredItemId,
+    maxDuration,
+    activeChapter,
+    setActiveChapter,
+    qualityTier,
+    setQualityTier,
+    qualityMode,
+    setQualityMode,
+    fps,
+    setFps,
+    cameraResetKey,
+    triggerCameraReset,
+  };
+
+  return (
+    <SimulationContext.Provider value={value}>
+      {children}
+    </SimulationContext.Provider>
+  );
+}

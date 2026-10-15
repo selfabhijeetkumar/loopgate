@@ -39,7 +39,7 @@ export function Diagram2DFallback({
       const elapsed = currentTime - itemStartTime;
 
       let stage: 'waiting' | 'intake' | 'scanning' | 'gate' | 'diverted' | 'compacting' | 'routed' = 'waiting';
-      let x = 40; // pixel coordinate on SVG
+      let x = 40;
       let y = 140;
 
       if (elapsed < 0) {
@@ -69,12 +69,14 @@ export function Diagram2DFallback({
       } else {
         stage = 'routed';
         const isDiverted = route === 'inspection_line' || route === 'hazard_hold';
+        const jitter = (index % 3) * 8;
         if (isDiverted) {
-          x = route === 'hazard_hold' ? 440 : 360;
-          y = 290;
+          x = route === 'hazard_hold' ? 448 + jitter : 348 + jitter;
+          y = 320;
         } else {
-          x = 680;
-          y = route === 'recyclable_bay' ? 90 : route === 'reusable_bay' ? 120 : 160;
+          // Terminal classification bays: right side collection pocket (never collides with left labels)
+          x = 735 + jitter;
+          y = route === 'recyclable_bay' ? 77 : route === 'reusable_bay' ? 122 : 167;
         }
       }
 
@@ -85,13 +87,13 @@ export function Diagram2DFallback({
         stage,
         x,
         y,
-        isActive: elapsed >= 0 && elapsed < 16,
+        isActive: elapsed >= 0 && elapsed < 18,
       };
     });
   }, [items, decisions, currentTime]);
 
   return (
-    <div className="w-full flex flex-col gap-4 bg-bg-surface border border-border-subtle p-4 rounded-[2px]">
+    <div className="w-full flex flex-col gap-4 bg-bg-surface border border-border-subtle p-4 pb-5 rounded-[2px]">
       {/* 2D HUD Header & Mode Indicator */}
       <div className="flex items-center justify-between border-b border-border-subtle pb-3">
         <div className="flex items-center gap-2">
@@ -111,23 +113,23 @@ export function Diagram2DFallback({
       {/* SVG Canvas */}
       <div className="w-full overflow-x-auto bg-[#0b0e11] border border-border-subtle/60 p-2 rounded-[2px]">
         <svg
-          viewBox="0 0 760 360"
-          className="w-full h-auto min-w-[680px] select-none font-mono"
+          viewBox="0 0 800 390"
+          className="w-full h-auto min-w-[720px] select-none font-mono"
           aria-label="2D Facility Schematic of the Loopgate Sorting Line"
         >
           {/* Main Conveyor Track */}
-          <rect x="40" y="125" width="600" height="30" fill="#141920" stroke="#242d38" strokeWidth="2" />
-          <line x1="40" y1="140" x2="640" y2="140" stroke="#334155" strokeDasharray="4 4" strokeWidth="1" />
+          <rect x="40" y="125" width="590" height="30" fill="#141920" stroke="#242d38" strokeWidth="2" />
+          <line x1="40" y1="140" x2="630" y2="140" stroke="#334155" strokeDasharray="4 4" strokeWidth="1" />
 
           {/* Diverter Spur Track to Inspection */}
-          <rect x="385" y="155" width="30" height="135" fill="#141920" stroke="#242d38" strokeWidth="2" />
-          <line x1="400" y1="155" x2="400" y2="290" stroke="#f59e0b" strokeDasharray="3 3" strokeWidth="1" opacity="0.6" />
+          <rect x="385" y="155" width="30" height="125" fill="#141920" stroke="#242d38" strokeWidth="2" />
+          <line x1="400" y1="155" x2="400" y2="280" stroke="#f59e0b" strokeDasharray="3 3" strokeWidth="1" opacity="0.6" />
 
           {/* 1. Intake Hopper */}
           <rect x="15" y="110" width="35" height="60" fill="#1e2630" stroke="#334155" />
           <text x="32" y="98" fill="#64748b" fontSize="8" textAnchor="middle">INTAKE</text>
 
-          {/* 2. Optical Scanner Gate */}
+          {/* 2. Vision Scanner Gate */}
           <rect x="200" y="85" width="40" height="110" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="2 2" />
           <rect x="205" y="80" width="30" height="12" fill="#0f172a" stroke="#f59e0b" />
           <text x="220" y="89" fill="#f59e0b" fontSize="7" textAnchor="middle">SCANNER</text>
@@ -139,14 +141,14 @@ export function Diagram2DFallback({
           <text x="400" y="105" fill="#94a3b8" fontSize="8" textAnchor="middle">DIVERTER</text>
 
           {/* 4. Inspection Station & Hazard Vault */}
-          <rect x="320" y="290" width="160" height="55" fill="#141920" stroke="#f59e0b" strokeWidth="1.5" />
-          <text x="400" y="308" fill="#f59e0b" fontSize="9" fontWeight="bold" textAnchor="middle">
+          <rect x="300" y="280" width="200" height="60" fill="#141920" stroke="#f59e0b" strokeWidth="1.5" />
+          <text x="400" y="296" fill="#f59e0b" fontSize="9" fontWeight="bold" textAnchor="middle">
             INSPECTION BAY &amp; QUARANTINE
           </text>
-          <rect x="330" y="318" width="65" height="20" fill="#0f172a" stroke="#475569" />
-          <text x="362" y="331" fill="#94a3b8" fontSize="7" textAnchor="middle">INSPECT [01]</text>
-          <rect x="405" y="318" width="65" height="20" fill="#451a03" stroke="#f59e0b" />
-          <text x="437" y="331" fill="#f59e0b" fontSize="7" fontWeight="bold" textAnchor="middle">HAZ-VAULT</text>
+          <rect x="310" y="304" width="85" height="28" fill="#0f172a" stroke="#475569" />
+          <text x="325" y="318" fill="#94a3b8" fontSize="7" textAnchor="start">INSPECT [01]</text>
+          <rect x="405" y="304" width="85" height="28" fill="#451a03" stroke="#f59e0b" />
+          <text x="420" y="318" fill="#f59e0b" fontSize="7" fontWeight="bold" textAnchor="start">HAZ-VAULT</text>
 
           {/* 5. Compactor Chamber */}
           <rect x="500" y="105" width="70" height="70" fill="#1e2630" stroke="#475569" strokeWidth="1.5" />
@@ -154,15 +156,21 @@ export function Diagram2DFallback({
           <rect x="510" y="112" width="50" height="10" fill="#475569" />
           <rect x="510" y="158" width="50" height="10" fill="#475569" />
 
-          {/* 6. Terminal Material Bins */}
-          <rect x="640" y="75" width="80" height="30" fill="#0c4a6e" stroke="#38bdf8" />
-          <text x="680" y="93" fill="#bae6fd" fontSize="8" textAnchor="middle">RECYCLABLE</text>
+          {/* 6. Terminal Material Bins -- Wide with segregated text (left) and item bins (right) */}
+          {/* Recyclable */}
+          <rect x="635" y="60" width="145" height="34" fill="#0c4a6e" stroke="#38bdf8" />
+          <text x="645" y="80" fill="#bae6fd" fontSize="8" fontWeight="bold" textAnchor="start">RECYCLABLE</text>
+          <line x1="720" y1="60" x2="720" y2="94" stroke="#38bdf8" strokeDasharray="2 2" strokeWidth="1" />
 
-          <rect x="640" y="115" width="80" height="30" fill="#1e293b" stroke="#94a3b8" />
-          <text x="680" y="133" fill="#cbd5e1" fontSize="8" textAnchor="middle">REUSABLE</text>
+          {/* Reusable */}
+          <rect x="635" y="105" width="145" height="34" fill="#1e293b" stroke="#94a3b8" />
+          <text x="645" y="125" fill="#cbd5e1" fontSize="8" fontWeight="bold" textAnchor="start">REUSABLE</text>
+          <line x1="720" y1="105" x2="720" y2="139" stroke="#94a3b8" strokeDasharray="2 2" strokeWidth="1" />
 
-          <rect x="640" y="155" width="80" height="30" fill="#14532d" stroke="#4ade80" />
-          <text x="680" y="173" fill="#bbf7d0" fontSize="8" textAnchor="middle">BIODEGRADABLE</text>
+          {/* Biodegradable */}
+          <rect x="635" y="150" width="145" height="34" fill="#14532d" stroke="#4ade80" />
+          <text x="645" y="170" fill="#bbf7d0" fontSize="8" fontWeight="bold" textAnchor="start">BIODEGRADABLE</text>
+          <line x1="720" y1="150" x2="720" y2="184" stroke="#4ade80" strokeDasharray="2 2" strokeWidth="1" />
 
           {/* Render Active Items */}
           {itemStates
@@ -200,7 +208,7 @@ export function Diagram2DFallback({
                   {/* Floating tag on select */}
                   {isSelected && (
                     <g transform="translate(0, -18)">
-                      <rect x="-40" y="-12" width="80" height="16" fill="#0f172a" stroke="#f59e0b" rx="2" />
+                      <rect x="-45" y="-12" width="90" height="16" fill="#0f172a" stroke="#f59e0b" rx="2" />
                       <text x="0" y="0" fill="#f59e0b" fontSize="7" textAnchor="middle">
                         p={fmtProb(s.item.hazardProbability)} [{s.route}]
                       </text>
@@ -209,6 +217,21 @@ export function Diagram2DFallback({
                 </g>
               );
             })}
+
+          {/* SVG Legend at bottom */}
+          <g transform="translate(40, 368)" fontSize="8" fill="#94a3b8">
+            <circle cx="6" cy="0" r="4" fill="#ef4444" />
+            <text x="14" y="3" fill="#cbd5e1">Hazard (p &ge; 0.30)</text>
+
+            <circle cx="140" cy="0" r="4" fill="#f59e0b" />
+            <text x="148" y="3" fill="#cbd5e1">Inspection Spur</text>
+
+            <circle cx="260" cy="0" r="4" fill="#38bdf8" />
+            <text x="268" y="3" fill="#cbd5e1">Classified Stream</text>
+
+            <rect x="380" y="-4" width="8" height="8" fill="none" stroke="#ffffff" strokeWidth="1.5" />
+            <text x="394" y="3" fill="#cbd5e1">Selected Item</text>
+          </g>
         </svg>
       </div>
 

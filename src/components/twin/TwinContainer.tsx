@@ -1,112 +1,44 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Item, RouteId } from '@/domain/types';
-import { simulateBatch, type SimulationResult } from '@/engine';
-import { SYNTHETIC_SCENARIO_ITEMS } from '@/data/scenario';
 import { ProvenanceChip } from '@/components/ProvenanceChip';
 import { Diagram2DFallback } from './Diagram2DFallback';
-
-// Dynamic import of 3D Canvas chunk (no SSR)
-const SentinelScene = dynamic(
-  () => import('./SentinelScene').then((mod) => mod.SentinelScene),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[520px] bg-[#080a0c] flex flex-col items-center justify-center gap-3 border border-border-subtle text-text-secondary font-mono text-xs">
-        <div className="w-6 h-6 border-2 border-border-default border-t-amber-500 animate-spin rounded-none" />
-        <span>INITIALIZING SENTINEL 3D KINEMATICS ENGINE...</span>
-      </div>
-    ),
-  }
-);
+import { SAFETY_FLOOR } from '@/engine/gate';
+import { useSimulation } from './SimulationContext';
+import { QualityControl } from '../world/QualityControl';
 
 interface TwinContainerProps {
-  initialItems?: Item[];
   className?: string;
 }
 
-export function TwinContainer({
-  initialItems = SYNTHETIC_SCENARIO_ITEMS,
-  className = '',
-}: TwinContainerProps) {
-  // -------------------------------------------------------------------------
-  // State: Engine Policy & Overrides
-  // -------------------------------------------------------------------------
-  const [strictnessPct, setStrictnessPct] = useState(50); // 0 to 100%
-  // Map strictness (0% to 100%) inversely onto active gate threshold [0.50, 0.10]
-  const tau = useMemo(() => {
-    return +(0.50 - (strictnessPct / 100) * 0.40).toFixed(3);
-  }, [strictnessPct]);
+export function TwinContainer({ className = '' }: TwinContainerProps) {
+  const {
+    items,
+    strictnessPct,
+    setStrictnessPct,
+    tau,
+    overrides,
+    setOverrideForItem,
+    clearOverrideForItem,
+    policy,
+    simulationResult,
+    currentTime,
+    setCurrentTime,
+    isPlaying,
+    setIsPlaying,
+    playbackSpeed,
+    setPlaybackSpeed,
+    selectedItemId,
+    setSelectedItemId,
+    maxDuration,
+    triggerCameraReset,
+  } = useSimulation();
 
-  const [overrides, setOverrides] = useState<Record<string, RouteId>>({});
+  const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
   const [overrideModalItem, setOverrideModalItem] = useState<Item | null>(null);
   const [pendingOverrideRoute, setPendingOverrideRoute] = useState<RouteId | null>(null);
   const [overrideErrorMessage, setOverrideErrorMessage] = useState<string | null>(null);
-
-  // Policy configuration
-  const policy = useMemo(() => {
-    return {
-      safetyFloor: 0.30,
-      hazardConfidentCutoff: 0.85,
-      inspectionThreshold: tau,
-      assumptions: [],
-    };
-  }, [tau]);
-
-  // Run deterministic simulation
-  const simulationResult: SimulationResult = useMemo(() => {
-    return simulateBatch(initialItems, policy, overrides);
-  }, [initialItems, policy, overrides]);
-
-  // -------------------------------------------------------------------------
-  // State: Playback & Timeline
-  // -------------------------------------------------------------------------
-  const [currentTime, setCurrentTime] = useState(0.0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [playbackSpeed, setPlaybackSpeed] = useState<0.5 | 1.0 | 2.0>(1.0);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [fps, setFps] = useState(60);
-  const [lowPowerMode, setLowPowerMode] = useState(false);
-  const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
-  const [cameraResetKey, setCameraResetKey] = useState(0);
-
-  const maxDuration = useMemo(() => {
-    return initialItems.length * 2.0 + 6.0; // ~46 seconds for 20 items
-  }, [initialItems.length]);
-
-  // Animation frame loop for smooth playback
-  const lastTimeRef = useRef<number>(performance.now());
-  const animationFrameIdRef = useRef<number | null>(null);
-
-  const tick = useCallback(() => {
-    const now = performance.now();
-    const delta = (now - lastTimeRef.current) / 1000;
-    lastTimeRef.current = now;
-
-    if (isPlaying) {
-      setCurrentTime((prev) => {
-        const next = prev + delta * playbackSpeed;
-        if (next >= maxDuration) {
-          return 0.0; // Loop seamlessly
-        }
-        return next;
-      });
-    }
-
-    animationFrameIdRef.current = requestAnimationFrame(tick);
-  }, [isPlaying, playbackSpeed, maxDuration]);
-
-  useEffect(() => {
-    lastTimeRef.current = performance.now();
-    animationFrameIdRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (animationFrameIdRef.current) {
-        cancelAnimationFrame(animationFrameIdRef.current);
-      }
-    };
-  }, [tick]);
 
   // Check prefers-reduced-motion
   useEffect(() => {
@@ -118,7 +50,7 @@ export function TwinContainer({
     }
   }, []);
 
-  // Keyboard navigation shortcuts (Space: toggle play, R: restart, 1/2/3: speed)
+  // Keyboard navigation shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
@@ -140,22 +72,23 @@ export function TwinContainer({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [setIsPlaying, setCurrentTime, setPlaybackSpeed]);
 
-  // -------------------------------------------------------------------------
   // Handlers: Judge Override
-  // -------------------------------------------------------------------------
   const handleOpenOverride = (item: Item, targetRoute: RouteId) => {
     setOverrideModalItem(item);
     setPendingOverrideRoute(targetRoute);
     setOverrideErrorMessage(null);
 
-    // Immediate safety-floor invariant validation check
-    if (item.hazardProbability >= policy.safetyFloor && targetRoute !== 'inspection_line' && targetRoute !== 'hazard_hold') {
+    if (
+      item.hazardProbability >= policy.safetyFloor &&
+      targetRoute !== 'inspection_line' &&
+      targetRoute !== 'hazard_hold'
+    ) {
       setOverrideErrorMessage(
         `REFUSED [OVERRIDE_REFUSED_SAFETY_FLOOR]: Item ${item.id} has hazard probability ${item.hazardProbability.toFixed(
           3
-        )} >= safety floor 0.30. Invariant EA-01 strictly prohibits routing hazard-floor items to compactor stream.`
+        )} >= safety floor ${SAFETY_FLOOR}. Invariant EA-01 strictly prohibits routing hazard-floor items to compactor stream.`
       );
     }
   };
@@ -163,25 +96,17 @@ export function TwinContainer({
   const handleConfirmOverride = () => {
     if (!overrideModalItem || !pendingOverrideRoute) return;
 
-    if (overrideModalItem.hazardProbability >= policy.safetyFloor && pendingOverrideRoute !== 'inspection_line' && pendingOverrideRoute !== 'hazard_hold') {
-      // Invariant protects floor
+    if (
+      overrideModalItem.hazardProbability >= policy.safetyFloor &&
+      pendingOverrideRoute !== 'inspection_line' &&
+      pendingOverrideRoute !== 'hazard_hold'
+    ) {
       return;
     }
 
-    setOverrides((prev) => ({
-      ...prev,
-      [overrideModalItem.id]: pendingOverrideRoute,
-    }));
+    setOverrideForItem(overrideModalItem.id, pendingOverrideRoute);
     setOverrideModalItem(null);
     setPendingOverrideRoute(null);
-  };
-
-  const handleClearOverride = (itemId: string) => {
-    setOverrides((prev) => {
-      const next = { ...prev };
-      delete next[itemId];
-      return next;
-    });
   };
 
   const selectedDecision = useMemo(() => {
@@ -191,18 +116,18 @@ export function TwinContainer({
 
   const selectedItem = useMemo(() => {
     if (!selectedItemId) return null;
-    return initialItems.find((item) => item.id === selectedItemId);
-  }, [selectedItemId, initialItems]);
+    return items.find((item) => item.id === selectedItemId);
+  }, [selectedItemId, items]);
 
   return (
     <section
-      aria-label="Loopgate Sentinel Facility 3D Digital Twin and Telemetry Stage"
+      aria-label="Loopgate Sentinel Facility Digital Twin Controls"
       className={`relative flex flex-col gap-3 font-sans ${className}`}
     >
       {/* ------------------------------------------------------------------- */}
       {/* 1. HUD Header Bar (Direction A Industrial Telemetry)                */}
       {/* ------------------------------------------------------------------- */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-bg-surface border border-border-subtle p-3 rounded-[2px]">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-bg-surface/95 border border-border-subtle p-3 rounded-[2px]">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-amber-500 rounded-none animate-pulse" />
@@ -210,17 +135,15 @@ export function TwinContainer({
               FACILITY-01 // SENTINEL DIGITAL TWIN
             </h2>
           </div>
-          <span className="text-[11px] font-mono text-text-muted hidden sm:inline">
-            |
-          </span>
+          <span className="text-[11px] font-mono text-text-muted hidden sm:inline">|</span>
           <span className="text-[11px] font-mono text-text-secondary hidden sm:inline">
-            ACTIVE BATCH: {initialItems.length} ITEMS [SIM]
+            ACTIVE BATCH: {items.length} ITEMS [SIM]
           </span>
         </div>
 
         {/* Viewport Control Toggles */}
-        <div className="flex items-center gap-2">
-          {/* Mode Switcher (3D WebGL vs 2D Schematic) */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Mode Switcher */}
           <div className="flex border border-border-subtle rounded-[2px] p-0.5 bg-bg-primary">
             <button
               onClick={() => setViewMode('3d')}
@@ -244,75 +167,55 @@ export function TwinContainer({
             </button>
           </div>
 
-          {/* Low-Power Mode Toggle */}
-          <button
-            onClick={() => setLowPowerMode((lp) => !lp)}
-            title="Toggle simplified shaders and 1x pixel ratio for integrated GPUs"
-            className={`px-2 py-1 text-[10px] font-mono border rounded-[2px] transition-colors ${
-              lowPowerMode
-                ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
-                : 'border-border-subtle text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            LOW-POWER: {lowPowerMode ? 'ON' : 'OFF'}
-          </button>
+          {/* Quality Controls */}
+          <QualityControl />
 
-          {/* Camera Reset (in 3D mode) */}
+          {/* Camera Reset */}
           {viewMode === '3d' && (
             <button
-              onClick={() => setCameraResetKey((k) => k + 1)}
-              title="Reset camera to hero isometric framing"
+              onClick={triggerCameraReset}
+              title="Reset camera framing"
               className="px-2 py-1 text-[10px] font-mono border border-border-subtle text-text-secondary hover:text-text-primary hover:bg-bg-elevated rounded-[2px] transition-colors"
             >
               RESET CAM
             </button>
           )}
-
-          {/* Real-time FPS readout */}
-          {viewMode === '3d' && (
-            <div className="px-2 py-1 text-[10px] font-mono border border-border-subtle text-text-muted bg-bg-primary rounded-[2px]">
-              FPS: <span className={fps >= 45 ? 'text-green-400' : 'text-amber-400'}>{fps}</span>
-            </div>
-          )}
         </div>
       </div>
 
       {/* ------------------------------------------------------------------- */}
-      {/* 2. Main Viewport Stage with Industrial Reticle Marks               */}
+      {/* 2. Main Viewport Stage (Transparent Portal in 3D, SVG in 2D)        */}
       {/* ------------------------------------------------------------------- */}
-      <div className="relative border border-border-subtle bg-[#080a0c] overflow-hidden rounded-[2px]">
+      <div className="relative border border-border-subtle bg-bg-surface/50 overflow-hidden rounded-[2px]">
         {/* Reticle HUD Corners */}
-        <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-border-default select-none pointer-events-none">
-          + LAT: 01.442 / LON: 08.192
+        <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-text-muted select-none pointer-events-none">
+          + SENTINEL-01 SYNTHETIC STREAM
         </div>
-        <div className="absolute top-2 right-2 z-10 text-[9px] font-mono text-border-default select-none pointer-events-none">
+        <div className="absolute top-2 right-2 z-10 text-[9px] font-mono text-text-muted select-none pointer-events-none">
           STATION: SCAN-GATE-01 +
         </div>
-        <div className="absolute bottom-2 left-2 z-10 text-[9px] font-mono text-border-default select-none pointer-events-none">
+        <div className="absolute bottom-2 left-2 z-10 text-[9px] font-mono text-text-muted select-none pointer-events-none">
           + REAL-TIME SIMULATION MATRIX
         </div>
-        <div className="absolute bottom-2 right-2 z-10 text-[9px] font-mono text-border-default select-none pointer-events-none">
-          SAFETY FLOOR: 0.300 +
+        <div className="absolute bottom-2 right-2 z-10 text-[9px] font-mono text-text-muted select-none pointer-events-none">
+          SAFETY FLOOR: {SAFETY_FLOOR.toFixed(3)} +
         </div>
 
-        {/* Viewport Render (3D or 2D) */}
-        <div className="w-full h-[480px] md:h-[540px]">
+        {/* Viewport Frame */}
+        <div className="w-full h-[440px] md:h-[500px] relative">
           {viewMode === '3d' ? (
-            <SentinelScene
-              items={initialItems}
-              decisions={simulationResult.decisions}
-              currentTime={currentTime}
-              isPlaying={isPlaying}
-              selectedItemId={selectedItemId}
-              onSelectItem={(id) => setSelectedItemId(id)}
-              lowPowerMode={lowPowerMode}
-              onFpsUpdate={setFps}
-              cameraResetKey={cameraResetKey}
-            />
+            <div className="w-full h-full flex flex-col items-center justify-between p-6 pointer-events-none select-none">
+              <div className="text-[10px] font-mono text-text-muted bg-bg-surface/90 border border-border-subtle px-3 py-1 rounded-[2px]">
+                3D SENTINEL FACILITY TWIN // INTERACTIVE ORBIT CAMERA ACTIVE
+              </div>
+              <div className="text-[10px] font-mono text-amber-400 bg-bg-surface/90 border border-border-subtle px-3 py-1 rounded-[2px]">
+                Hover or click any 3D item along the belt to inspect telemetry or trigger manual divert
+              </div>
+            </div>
           ) : (
-            <div className="p-4 h-full overflow-y-auto">
+            <div className="p-3 h-full">
               <Diagram2DFallback
-                items={initialItems}
+                items={items}
                 decisions={simulationResult.decisions}
                 currentTime={currentTime}
                 isPlaying={isPlaying}
@@ -325,81 +228,87 @@ export function TwinContainer({
               />
             </div>
           )}
+
+          {/* Floating Item Inspector Badge (when an item is selected) */}
+          {selectedItem && selectedDecision && (
+            <aside
+              aria-label="Selected item inspection telemetry"
+              className="absolute top-10 left-4 z-20 w-72 bg-bg-surface/95 border border-border-default p-3 shadow-2xl rounded-[2px] font-mono text-xs pointer-events-auto"
+            >
+              <div className="flex items-center justify-between border-b border-border-subtle pb-2 mb-2">
+                <span className="font-bold text-text-primary uppercase tracking-wide truncate max-w-[200px]">
+                  {selectedItem.id} // {selectedItem.name}
+                </span>
+                <button
+                  onClick={() => setSelectedItemId(null)}
+                  aria-label="Close inspector"
+                  className="text-text-muted hover:text-text-primary px-1"
+                >
+                  [X]
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 text-[11px] mb-3">
+                <div className="text-text-muted">Primary Class:</div>
+                <div className="text-text-primary font-bold uppercase">{selectedItem.primaryClass}</div>
+
+                <div className="text-text-muted">Hazard Prob:</div>
+                <div
+                  className={
+                    selectedItem.hazardProbability >= SAFETY_FLOOR
+                      ? 'text-amber-400 font-bold'
+                      : 'text-text-primary'
+                  }
+                >
+                  {(selectedItem.hazardProbability * 100).toFixed(1)}%
+                </div>
+
+                <div className="text-text-muted">Gate Score:</div>
+                <div className="text-text-primary">{selectedDecision.gateScore.toFixed(3)}</div>
+
+                <div className="text-text-muted">Assigned Route:</div>
+                <div className="text-amber-400 font-bold uppercase">{selectedDecision.route}</div>
+
+                <div className="text-text-muted">Decision Code:</div>
+                <div className="text-text-secondary text-[10px] truncate" title={selectedDecision.reasonCode}>
+                  {selectedDecision.reasonCode}
+                </div>
+              </div>
+
+              {/* Overrides control buttons */}
+              <div className="flex flex-col gap-1.5 border-t border-border-subtle pt-2">
+                <span className="text-[10px] text-text-secondary tracking-widest uppercase">
+                  Judge Manual Override:
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    id="inspector-divert-btn"
+                    onClick={() => handleOpenOverride(selectedItem, 'inspection_line')}
+                    className="px-2 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[10px] font-bold rounded-[2px] transition-colors"
+                  >
+                    Divert Inspection
+                  </button>
+                  <button
+                    id="inspector-standard-line-btn"
+                    onClick={() => handleOpenOverride(selectedItem, 'recyclable_bay')}
+                    className="px-2 py-1.5 bg-bg-elevated hover:bg-bg-primary border border-border-default text-text-secondary hover:text-text-primary text-[10px] rounded-[2px] transition-colors"
+                  >
+                    Standard Line
+                  </button>
+                </div>
+                {overrides[selectedItem.id] && (
+                  <button
+                    id="inspector-clear-override-btn"
+                    onClick={() => clearOverrideForItem(selectedItem.id)}
+                    className="mt-1 px-2 py-1 text-[10px] text-text-muted hover:text-amber-400 border border-border-subtle rounded-[2px] transition-colors"
+                  >
+                    Clear Custom Override
+                  </button>
+                )}
+              </div>
+            </aside>
+          )}
         </div>
-
-        {/* Floating Item Inspector Badge (when an item is selected in viewport) */}
-        {selectedItem && selectedDecision && (
-          <aside
-            aria-label="Selected item inspection telemetry"
-            className="absolute top-10 left-4 z-20 w-72 bg-bg-surface/95 border border-border-default p-3 backdrop-blur-md shadow-2xl rounded-[2px] font-mono text-xs"
-          >
-            <div className="flex items-center justify-between border-b border-border-subtle pb-2 mb-2">
-              <span className="font-bold text-text-primary uppercase tracking-wide">
-                {selectedItem.id} // {selectedItem.name}
-              </span>
-              <button
-                onClick={() => setSelectedItemId(null)}
-                aria-label="Close inspector"
-                className="text-text-muted hover:text-text-primary px-1"
-              >
-                [X]
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5 text-[11px] mb-3">
-              <div className="text-text-muted">Primary Class:</div>
-              <div className="text-text-primary font-bold uppercase">{selectedItem.primaryClass}</div>
-
-              <div className="text-text-muted">Hazard Prob:</div>
-              <div className={selectedItem.hazardProbability >= 0.30 ? 'text-amber-400 font-bold' : 'text-text-primary'}>
-                {(selectedItem.hazardProbability * 100).toFixed(1)}%
-              </div>
-
-              <div className="text-text-muted">Gate Score:</div>
-              <div className="text-text-primary">{selectedDecision.gateScore.toFixed(3)}</div>
-
-              <div className="text-text-muted">Assigned Route:</div>
-              <div className="text-amber-400 font-bold uppercase">{selectedDecision.route}</div>
-
-              <div className="text-text-muted">Decision Code:</div>
-              <div className="text-text-secondary text-[10px] truncate" title={selectedDecision.reasonCode}>
-                {selectedDecision.reasonCode}
-              </div>
-            </div>
-
-            {/* Overrides control buttons */}
-            <div className="flex flex-col gap-1.5 border-t border-border-subtle pt-2">
-              <span className="text-[10px] text-text-secondary tracking-widest uppercase">
-                Judge Manual Override:
-              </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  id="inspector-divert-btn"
-                  onClick={() => handleOpenOverride(selectedItem, 'inspection_line')}
-                  className="px-2 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[10px] font-bold rounded-[2px] transition-colors"
-                >
-                  Divert Inspection
-                </button>
-                <button
-                  id="inspector-standard-line-btn"
-                  onClick={() => handleOpenOverride(selectedItem, 'recyclable_bay')}
-                  className="px-2 py-1.5 bg-bg-elevated hover:bg-bg-primary border border-border-default text-text-secondary hover:text-text-primary text-[10px] rounded-[2px] transition-colors"
-                >
-                  Standard Line
-                </button>
-              </div>
-              {overrides[selectedItem.id] && (
-                <button
-                  id="inspector-clear-override-btn"
-                  onClick={() => handleClearOverride(selectedItem.id)}
-                  className="mt-1 px-2 py-1 text-[10px] text-text-muted hover:text-amber-400 border border-border-subtle rounded-[2px] transition-colors"
-                >
-                  Clear Custom Override
-                </button>
-              )}
-            </div>
-          </aside>
-        )}
       </div>
 
       {/* ------------------------------------------------------------------- */}
@@ -410,7 +319,7 @@ export function TwinContainer({
         <div className="lg:col-span-5 flex flex-col justify-between gap-2 border-b lg:border-b-0 lg:border-r border-border-subtle pb-3 lg:pb-0 lg:pr-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">
-              Timeline Telemetry & Playback
+              Timeline Telemetry &amp; Playback
             </span>
             <span className="text-[11px] font-mono text-amber-400 font-bold">
               T+{currentTime.toFixed(1).padStart(4, '0')}s / T+{maxDuration.toFixed(1)}s
@@ -467,21 +376,22 @@ export function TwinContainer({
           </div>
         </div>
 
-        {/* Live Strictness Control (Cols 6-12) */}
+        {/* Live Strictness Slider (Cols 6-12) */}
         <div className="lg:col-span-7 flex flex-col justify-between gap-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <label
-                htmlFor="strictness-slider"
-                className="text-xs font-mono font-bold text-text-primary uppercase tracking-wider"
-              >
-                Inspection Strictness: {strictnessPct}%
-              </label>
-              <ProvenanceChip provenance="Calculated" />
+              <span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">
+                Gating Strictness Setting
+              </span>
+              <ProvenanceChip provenance="Configured" showPrefix={false} />
             </div>
-            <span className="text-xs font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-[2px]">
-              tau = {tau.toFixed(3)}
-            </span>
+            <div className="flex items-center gap-3 font-mono text-xs">
+              <span className="text-text-muted">
+                Threshold (&tau;):{' '}
+                <span className="text-amber-400 font-bold">{tau.toFixed(3)}</span>
+              </span>
+              <span className="text-text-secondary">[{strictnessPct}%]</span>
+            </div>
           </div>
 
           <input
@@ -489,16 +399,17 @@ export function TwinContainer({
             type="range"
             min={0}
             max={100}
+            step={1}
             value={strictnessPct}
             onChange={(e) => setStrictnessPct(parseInt(e.target.value, 10))}
-            className="w-full accent-amber-500 cursor-pointer h-2 bg-bg-primary rounded-none"
-            aria-label="Inspection strictness slider (maps to uncertainty gate threshold)"
+            aria-label="Gating strictness slider from 0% to 100%"
+            className="w-full accent-amber-500 cursor-pointer h-1.5 bg-bg-primary rounded-none"
           />
 
           <div className="flex items-center justify-between text-[10px] font-mono text-text-muted">
-            <span>0% (tau = 0.500: Max Throughput)</span>
-            <span>50% (tau = 0.300: Balanced)</span>
-            <span>100% (tau = 0.100: Max Inspection)</span>
+            <span>0% (tau = {(0.48).toFixed(3)}: Max Throughput)</span>
+            <span>50% (tau = {(0.48 - 0.5 * 0.40).toFixed(3)}: Balanced)</span>
+            <span>100% (tau = {(0.48 - 0.40).toFixed(3)}: Max Inspection)</span>
           </div>
         </div>
       </div>
@@ -519,7 +430,7 @@ export function TwinContainer({
             {simulationResult.metrics.expectedHazardExposure.toFixed(3)}
           </div>
           <span className="text-[10px] font-mono text-text-muted">
-            Residual compactor fire risk
+            Estimated residual hazard (simulated)
           </span>
         </div>
 
@@ -535,7 +446,7 @@ export function TwinContainer({
             {simulationResult.metrics.inspectionLoad.toFixed(1)} / min
           </div>
           <span className="text-[10px] font-mono text-text-muted">
-            {simulationResult.metrics.inspectionLineCount} of {initialItems.length} items diverted
+            {simulationResult.metrics.inspectionLineCount} of {items.length} items diverted
           </span>
         </div>
 
@@ -548,7 +459,8 @@ export function TwinContainer({
             <ProvenanceChip provenance="Calculated" />
           </div>
           <div className="text-xl font-mono font-bold text-text-primary">
-            {simulationResult.metrics.throughputPerMinute.toFixed(1)} <span className="text-xs text-text-muted">items/min</span>
+            {simulationResult.metrics.throughputPerMinute.toFixed(1)}{' '}
+            <span className="text-xs text-text-muted">items/min</span>
           </div>
           <span className="text-[10px] font-mono text-text-muted">
             {simulationResult.metrics.backlogActive ? 'Backlog penalty applied' : 'Nominal sorting flow'}
@@ -598,10 +510,10 @@ export function TwinContainer({
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
-              {initialItems.map((item) => {
+              {items.map((item) => {
                 const dec = simulationResult.decisions.find((d) => d.itemId === item.id);
                 const isSelected = selectedItemId === item.id;
-                const isFloor = item.hazardProbability >= 0.30;
+                const isFloor = item.hazardProbability >= SAFETY_FLOOR;
                 return (
                   <tr
                     key={item.id}
@@ -617,9 +529,7 @@ export function TwinContainer({
                         : 'hover:bg-bg-elevated text-text-secondary'
                     }`}
                   >
-                    <td className="py-1.5 px-3 font-bold text-text-primary">
-                      {item.id}
-                    </td>
+                    <td className="py-1.5 px-3 font-bold text-text-primary">{item.id}</td>
                     <td className="py-1.5 px-3 truncate max-w-[140px]">{item.name}</td>
                     <td className="py-1.5 px-3 uppercase text-[10px]">{item.primaryClass}</td>
                     <td className={`py-1.5 px-3 font-mono ${isFloor ? 'text-amber-400 font-bold' : ''}`}>
@@ -705,7 +615,6 @@ export function TwinContainer({
                 </div>
               </div>
 
-              {/* Refusal warning if safety floor violated */}
               {overrideErrorMessage ? (
                 <div
                   id="override-refusal-alert"
@@ -748,3 +657,5 @@ export function TwinContainer({
     </section>
   );
 }
+
+export default TwinContainer;

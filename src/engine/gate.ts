@@ -32,6 +32,13 @@ import type { MaterialClass, RouteId } from '../domain/types';
 /** Weight given to hazardProbability vs uncertainty in gate score computation. */
 export const HAZARD_WEIGHT = 0.65;
 
+/**
+ * Hard safety floor. Items with hazardProbability >= SAFETY_FLOOR are categorically
+ * barred from the compactor stream under any policy setting (invariant EA-01).
+ * SINGLE SOURCE OF TRUTH -- import from here; do not duplicate this value.
+ */
+export const SAFETY_FLOOR = 0.30;
+
 /** Max modelDisagreement below which a floor-triggered item is confidently hazardous. */
 export const HAZARD_CONFIDENT_DISAGREEMENT_CUTOFF = 0.30;
 
@@ -178,7 +185,7 @@ function classBayRoute(cls: MaterialClass): RouteId {
  *    items in the Simulated scenario; 0.30 gives cleaner margin.
  */
 export const DEFAULT_GATE_POLICY: GatePolicy = {
-  safetyFloor: 0.30,
+  safetyFloor: SAFETY_FLOOR,
   hazardConfidentCutoff: 0.75,
   inspectionThreshold: 0.50,
 };

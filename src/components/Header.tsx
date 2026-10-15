@@ -1,23 +1,85 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ThemeToggle } from './ThemeToggle';
 
+const NAV_LINKS = [
+  { label: 'Twin', href: '#twin' },
+  { label: 'Decision', href: '#decision' },
+  { label: 'Streams', href: '#streams' },
+  { label: 'Assumptions', href: '#assumptions' },
+];
+
+const SECTION_IDS = NAV_LINKS.map((l) => l.href.slice(1));
+
+function smoothScrollTo(id: string) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const isDev = process.env.NODE_ENV === 'development';
+
+  /* ------------------------------------------------------------------
+   * Scroll-spy: watch section entry via IntersectionObserver
+   * ------------------------------------------------------------------ */
+  useEffect(() => {
+    const tracked: IntersectionObserverEntry[] = [];
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      {
+        rootMargin: '-20% 0px -60% 0px', // triggers when section is in upper 40% of viewport
+        threshold: 0,
+      }
+    );
+
+    SECTION_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observerRef.current?.observe(el);
+    });
+
+    return () => observerRef.current?.disconnect();
+  }, []);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    smoothScrollTo(href.slice(1));
+  };
+
+  const navLinkClass = (href: string) => {
+    const isActive = activeSection === href.slice(1);
+    return [
+      'relative transition-colors duration-150',
+      isActive
+        ? 'text-text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-amber-500'
+        : 'text-text-secondary hover:text-text-primary',
+    ].join(' ');
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border-subtle bg-bg-primary/90 backdrop-blur-md transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-        {/* Brand / Clickable Logo */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+        {/* Brand */}
         <Link
           href="/"
           className="flex items-center gap-2.5 group focus-visible:outline-2 focus-visible:outline-amber-500 rounded-[2px]"
           aria-label="Loopgate Home"
         >
           <div className="w-7 h-7 rounded-[2px] bg-bg-surface border border-border-strong flex items-center justify-center group-hover:border-amber-500 transition-colors">
-            {/* SVG Mark */}
             <svg
               className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors"
               viewBox="0 0 24 24"
@@ -37,43 +99,38 @@ export function Header() {
           <span className="font-display font-bold tracking-wider text-sm sm:text-base text-text-primary">
             LOOP<span className="text-amber-500">GATE</span>
           </span>
-          <span className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono uppercase tracking-widest border border-border-subtle text-text-muted rounded-[2px]">
+          <span className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest border border-border-subtle text-text-muted rounded-[2px]">
             HUD v1.0
           </span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav
-          className="hidden md:flex items-center gap-6 text-xs uppercase tracking-wider font-mono text-text-secondary"
+          className="hidden md:flex items-center gap-6 text-xs uppercase tracking-wider font-mono"
           aria-label="Main Navigation"
         >
-          <Link
-            href="/"
-            className="text-text-primary border-b border-amber-500 pb-0.5 hover:text-amber-400 transition-colors"
-          >
-            Home
-          </Link>
-          <a
-            href="#capabilities"
-            className="hover:text-text-primary transition-colors"
-          >
-            Capabilities
-          </a>
-          <a
-            href="#contracts"
-            className="hover:text-text-primary transition-colors"
-          >
-            Domain Contracts
-          </a>
-          <a
-            href="#scenario"
-            className="hover:text-text-primary transition-colors"
-          >
-            Synthetic Data
-          </a>
+          {NAV_LINKS.map(({ label, href }) => (
+            <a
+              key={href}
+              href={href}
+              onClick={(e) => handleNavClick(e, href)}
+              className={navLinkClass(href)}
+              aria-current={activeSection === href.slice(1) ? 'location' : undefined}
+            >
+              {label}
+            </a>
+          ))}
+          {isDev && (
+            <Link
+              href="/dev/engine"
+              className="ml-2 px-2.5 py-1 border border-amber-600/50 text-amber-400 hover:border-amber-500 hover:text-amber-300 rounded-[2px] transition-colors text-[10px]"
+            >
+              Dev Engine
+            </Link>
+          )}
         </nav>
 
-        {/* Actions: Theme Toggle + Mobile Menu Trigger */}
+        {/* Actions */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
 
@@ -87,30 +144,12 @@ export function Header() {
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? (
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M18 6 6 18" />
                 <path d="m6 6 12 12" />
               </svg>
             ) : (
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line x1="4" x2="20" y1="12" y2="12" />
                 <line x1="4" x2="20" y1="6" y2="6" />
                 <line x1="4" x2="20" y1="18" y2="18" />
@@ -125,35 +164,34 @@ export function Header() {
         <div
           id="mobile-menu"
           className="md:hidden border-b border-border-subtle bg-bg-surface px-4 py-4 space-y-3 font-mono text-xs uppercase tracking-wider"
+          role="navigation"
+          aria-label="Mobile navigation"
         >
-          <Link
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-amber-500 py-1"
-          >
-            Home
-          </Link>
-          <a
-            href="#capabilities"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-text-secondary hover:text-text-primary py-1"
-          >
-            Capabilities
-          </a>
-          <a
-            href="#contracts"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-text-secondary hover:text-text-primary py-1"
-          >
-            Domain Contracts
-          </a>
-          <a
-            href="#scenario"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-text-secondary hover:text-text-primary py-1"
-          >
-            Synthetic Data
-          </a>
+          {NAV_LINKS.map(({ label, href }) => (
+            <a
+              key={href}
+              href={href}
+              onClick={(e) => handleNavClick(e, href)}
+              aria-current={activeSection === href.slice(1) ? 'location' : undefined}
+              className={[
+                'block py-1.5 transition-colors',
+                activeSection === href.slice(1)
+                  ? 'text-amber-400 border-l-2 border-amber-500 pl-2'
+                  : 'text-text-secondary hover:text-text-primary pl-2',
+              ].join(' ')}
+            >
+              {label}
+            </a>
+          ))}
+          {isDev && (
+            <Link
+              href="/dev/engine"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-1.5 pl-2 text-amber-500 hover:text-amber-400 border-l-2 border-amber-600/40"
+            >
+              Dev Engine
+            </Link>
+          )}
         </div>
       )}
     </header>

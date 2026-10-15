@@ -11,6 +11,7 @@ interface FacilityLineProps {
   compactorOffset?: number; // 0 = open, 1 = pressed down
   activeStation?: string;
   lowPowerMode?: boolean;
+  hideFloor?: boolean;
 }
 
 export function FacilityLine({
@@ -19,6 +20,7 @@ export function FacilityLine({
   diverterAngle = 0,
   compactorOffset = 0,
   lowPowerMode = false,
+  hideFloor = false,
 }: FacilityLineProps) {
   const beltTextureRef = useRef<THREE.MeshStandardMaterial>(null);
   const scanPlaneRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -38,18 +40,28 @@ export function FacilityLine({
       {/* ------------------------------------------------------------------ */}
       {/* 1. Industrial Floor & Markings                                      */}
       {/* ------------------------------------------------------------------ */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={!lowPowerMode}>
-        <planeGeometry args={[36, 24]} />
-        <meshStandardMaterial color="#0d0f11" roughness={0.85} metalness={0.1} />
-      </mesh>
+      {!hideFloor && (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={!lowPowerMode}>
+            <planeGeometry args={[40, 28]} />
+            <meshStandardMaterial color="#181c22" roughness={0.75} metalness={0.15} />
+          </mesh>
 
-      {/* Grid line markings */}
-      <gridHelper args={[36, 36, '#242c35', '#171c22']} position={[0, 0, 0]} />
+          {/* Grid line markings: visible high-contrast graphite */}
+          <gridHelper args={[40, 40, '#475569', '#242d38']} position={[0, 0, 0]} />
+        </>
+      )}
 
       {/* Safety boundary line around inspection spur */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.5, 0.005, 3.2]}>
-        <planeGeometry args={[4.2, 5.0]} />
-        <meshBasicMaterial color="#f59e0b" wireframe transparent opacity={0.25} />
+        <planeGeometry args={[4.4, 5.2]} />
+        <meshBasicMaterial color="#f59e0b" wireframe transparent opacity={0.4} />
+      </mesh>
+
+      {/* Compactor hazard footprint boundary */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4.5, 0.005, 0]}>
+        <planeGeometry args={[2.8, 2.6]} />
+        <meshBasicMaterial color="#eab308" wireframe transparent opacity={0.3} />
       </mesh>
 
       {/* ------------------------------------------------------------------ */}

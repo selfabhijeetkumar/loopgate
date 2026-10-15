@@ -23,6 +23,7 @@
   /* Typography variables */
   --font-display: var(--font-space-grotesk), "Space Grotesk", system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  --font-serif: var(--font-serif-italic), "Instrument Serif", Georgia, serif;
 }
 
 [data-theme="light"] {
@@ -58,6 +59,7 @@
   --color-signal-hazard-border: var(--signal-hazard-border);
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
 }
 
 html {
@@ -140,4 +142,9 @@ select:focus-visible,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+.font-serif-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
 }

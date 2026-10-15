@@ -274,6 +274,7 @@ export function simulateBatch(
  * across its detections, normalized to [0,1].
  */
 function computeModelDisagreement(item: Item): number {
+  if (item.modelDisagreement !== undefined) return item.modelDisagreement;
   if (item.detections.length <= 1) return 0;
   const probs = item.detections.map((d) => d.hazardProbability);
   const range = Math.max(...probs) - Math.min(...probs);
