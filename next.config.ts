@@ -1,12 +1,27 @@
 import type { NextConfig } from "next";
 
+/**
+ * Content-Security-Policy
+ *
+ * connect-src covers XHR/fetch from the main thread AND from Web Workers.
+ * @huggingface/transformers downloads model shards via:
+ *   1. https://huggingface.co/api/...  (metadata)
+ *   2. https://cdn-lfs.huggingface.co  (large file storage — direct)
+ *   3. https://cdn-lfs-us-1.huggingface.co  (US LFS CDN shard)
+ *   4. https://cdn-lfs-eu-central-1.huggingface.co  (EU LFS CDN shard)
+ *   Wildcard *.huggingface.co covers all current and future shard regions.
+ *
+ * blob: in connect-src allows workers to fetch their own blob: URL entry points.
+ * data: is intentionally excluded from connect-src — we pass image crops as
+ * ImageData/canvas blobs so the worker never needs to fetch a data: URI.
+ */
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline';
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https:;
   font-src 'self' data:;
-  connect-src 'self' https://huggingface.co https://*.huggingface.co https://cdn-lfs.huggingface.co https://generativelanguage.googleapis.com;
+  connect-src 'self' blob: https://huggingface.co https://*.huggingface.co https://generativelanguage.googleapis.com;
   worker-src 'self' blob:;
   frame-ancestors 'none';
   base-uri 'self';

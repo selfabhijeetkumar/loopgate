@@ -82,11 +82,11 @@ export const CHAPTER_CAMERA_STATES: SceneCameraState[] = [
     target: new THREE.Vector3(3.8, 0.7, 0.0),
     fov: 42,
   },
-  // 4: RUN IT YOURSELF — interactive orbit view of complete line
+  // 4: RUN IT YOURSELF — interactive orbit view of complete line (all stations visible)
   {
-    position: new THREE.Vector3(-0.8, 7.8, 15.2),
-    target: new THREE.Vector3(0.0, 0.8, 0.0),
-    fov: 45,
+    position: new THREE.Vector3(-0.5, 10.0, 20.0),
+    target: new THREE.Vector3(0.0, 0.6, 0.0),
+    fov: 52,
   },
   // 5: STREAMS & ASSUMPTIONS — pulled-back elevated oblique, darker world
   {
@@ -301,6 +301,7 @@ function AnimatedItem({
           name={item.name}
           primaryClass={item.primaryClass}
           hazardProbability={item.hazardProbability}
+          cropTextureUrl={item.notes?.startsWith('data:image') ? item.notes : undefined}
           isSelected={isSelected}
           isHovered={isHovered}
           isFloorTriggered={isHazard}
@@ -383,39 +384,39 @@ function HeroFloatingHazards({ reducedMotion }: { reducedMotion: boolean }) {
       <mesh position={[-3.2, 0, 1.2]} castShadow>
         <boxGeometry args={[0.7, 0.28, 1.1]} />
         <meshStandardMaterial
-          color="#1e293b"
+          color="#243042"
           roughness={0.25}
           metalness={0.7}
-          emissive="#ef4444"
-          emissiveIntensity={0.12}
+          emissive="#d97706"
+          emissiveIntensity={0.25}
         />
       </mesh>
       {/* Vape pen */}
       <mesh position={[0.2, 0, -1.2]}>
         <cylinderGeometry args={[0.1, 0.1, 0.95, 12]} />
         <meshStandardMaterial
-          color="#0f172a"
+          color="#1e293b"
           roughness={0.2}
           metalness={0.8}
-          emissive="#f97316"
-          emissiveIntensity={0.1}
+          emissive="#f59e0b"
+          emissiveIntensity={0.2}
         />
       </mesh>
       {/* Phone */}
       <mesh position={[3.2, 0, 0.6]} castShadow>
         <boxGeometry args={[0.42, 0.07, 0.85]} />
         <meshStandardMaterial
-          color="#0f172a"
+          color="#1e293b"
           roughness={0.15}
           metalness={0.9}
-          emissive="#ef4444"
-          emissiveIntensity={0.1}
+          emissive="#b45309"
+          emissiveIntensity={0.2}
         />
       </mesh>
-      {/* Dedicated accent lights */}
-      <pointLight position={[-3.2, 1.2, 1.2]} intensity={0.6} color="#ef4444" distance={4} />
-      <pointLight position={[0.2, 1.2, -1.2]} intensity={0.5} color="#f97316" distance={3.5} />
-      <pointLight position={[3.2, 1.2, 0.6]} intensity={0.6} color="#ef4444" distance={4} />
+      {/* Dedicated accent lights (amber only) */}
+      <pointLight position={[-3.2, 1.2, 1.2]} intensity={0.7} color="#f59e0b" distance={4} />
+      <pointLight position={[0.2, 1.2, -1.2]} intensity={0.6} color="#f59e0b" distance={3.5} />
+      <pointLight position={[3.2, 1.2, 0.6]} intensity={0.7} color="#f59e0b" distance={4} />
     </group>
   );
 }
@@ -450,8 +451,8 @@ function FloorWithRipple({
       uTime: { value: 0 },
       uPointer: { value: new THREE.Vector3(0, 0, 0) },
       uRippleStrength: { value: 0.08 },
-      uColor: { value: new THREE.Color('#14181f') },
-      uGridColor: { value: new THREE.Color('#2e3948') },
+      uColor: { value: new THREE.Color('#222936') },
+      uGridColor: { value: new THREE.Color('#475569') },
       uHighlightColor: { value: new THREE.Color('#f59e0b') },
     }),
     []
@@ -928,12 +929,13 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
       <color attach="background" args={['#070a0d']} />
       <fog attach="fog" args={['#070a0d', 26, 54]} />
 
-      {/* Lighting: cool rim light, warm key light, soft fill */}
-      <ambientLight intensity={chapter >= 5 ? 0.22 : 0.4} />
+      {/* Lighting: boosted ambient, hemisphere, warm key, and facility rim lights */}
+      <hemisphereLight args={['#dbeafe', '#1e293b', chapter >= 5 ? 0.45 : 0.85]} />
+      <ambientLight intensity={chapter >= 5 ? 0.35 : 0.75} />
       <directionalLight
         position={[-6, 18, 12]}
-        intensity={chapter >= 5 ? 0.7 : 1.3}
-        color="#fff2db"
+        intensity={chapter >= 5 ? 0.9 : 1.8}
+        color="#fff5e6"
         castShadow={shadows}
         shadow-mapSize={shadowMapSize}
         shadow-bias={-0.0001}
@@ -944,8 +946,12 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
         shadow-camera-top={15}
         shadow-camera-bottom={-15}
       />
-      <directionalLight position={[12, 10, -8]} intensity={chapter >= 5 ? 0.2 : 0.4} color="#b0d4ff" />
-      <directionalLight position={[0, -4, 12]} intensity={0.12} color="#8fa8c8" />
+      {/* Cool rim from right */}
+      <directionalLight position={[12, 10, -8]} intensity={chapter >= 5 ? 0.35 : 0.7} color="#bfdbfe" />
+      {/* Front-fill from below */}
+      <directionalLight position={[0, -2, 12]} intensity={0.25} color="#94a3b8" />
+      {/* Direct facility rim targeting belt, compactor, and bins */}
+      <directionalLight position={[6, 8, 8]} intensity={0.65} color="#e0f2fe" />
 
       {/* Dynamic floor ripple with pointer vertex displacement */}
       <FloorWithRipple

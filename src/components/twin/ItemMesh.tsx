@@ -9,10 +9,81 @@ interface ItemMeshProps {
   name: string;
   primaryClass: MaterialClass;
   hazardProbability: number;
+  cropTextureUrl?: string;
   isHovered?: boolean;
   isSelected?: boolean;
   isScanned?: boolean;
   isFloorTriggered?: boolean;
+}
+
+function PhotoTileMesh({
+  cropTextureUrl,
+  isHazardous,
+  isSelected,
+  isHovered,
+}: {
+  cropTextureUrl?: string;
+  isHazardous: boolean;
+  isSelected?: boolean;
+  isHovered?: boolean;
+}) {
+  const [texture, setTexture] = React.useState<THREE.Texture | null>(null);
+
+  React.useEffect(() => {
+    if (!cropTextureUrl) return;
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      cropTextureUrl,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        setTexture(tex);
+      },
+      undefined,
+      (err) => console.warn('Tile texture load error:', err)
+    );
+  }, [cropTextureUrl]);
+
+  const edgeColor = isSelected
+    ? '#f59e0b'
+    : isHovered
+    ? '#fbbf24'
+    : isHazardous
+    ? '#f59e0b'
+    : '#475569';
+
+  return (
+    <group position={[0, 0.04, 0]}>
+      {/* Slim Tile Base */}
+      <mesh position={[0, 0, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.54, 0.05, 0.54]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.6} />
+      </mesh>
+
+      {/* Textured Top Face with Cropped Photo */}
+      <mesh position={[0, 0.026, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.50, 0.50]} />
+        {texture ? (
+          <meshBasicMaterial map={texture} />
+        ) : (
+          <meshStandardMaterial color="#334155" roughness={0.6} />
+        )}
+      </mesh>
+
+      {/* Class-based / Amber Hazard Trim Bezel */}
+      <mesh position={[0, 0.027, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.24, 0.26, 4]} />
+        <meshBasicMaterial color={edgeColor} />
+      </mesh>
+
+      {/* Hazard Indicator Accent Pin if Hazardous */}
+      {isHazardous && (
+        <mesh position={[0.22, 0.04, 0.22]}>
+          <boxGeometry args={[0.06, 0.04, 0.06]} />
+          <meshBasicMaterial color="#f59e0b" />
+        </mesh>
+      )}
+    </group>
+  );
 }
 
 /**
@@ -24,12 +95,30 @@ export function ItemGeometry({
   itemId,
   primaryClass,
   hazardProbability,
+  cropTextureUrl,
   isHovered,
   isSelected,
   isFloorTriggered,
 }: ItemMeshProps) {
-  const isHazardous = primaryClass === 'hazardous' || hazardProbability >= 0.30 || isFloorTriggered;
+  const isHazardous = Boolean(primaryClass === 'hazardous' || hazardProbability >= 0.30 || isFloorTriggered);
   
+  // Photo-textured tile for CV photo items
+  if (
+    cropTextureUrl ||
+    itemId.startsWith('photo-') ||
+    itemId.startsWith('cv-') ||
+    itemId.startsWith('manual-')
+  ) {
+    return (
+      <PhotoTileMesh
+        cropTextureUrl={cropTextureUrl}
+        isHazardous={isHazardous}
+        isSelected={isSelected}
+        isHovered={isHovered}
+      />
+    );
+  }
+
   // Materials
   const baseColor = useMemo(() => {
     if (isSelected) return '#f59e0b';
@@ -219,7 +308,7 @@ export function ItemGeometry({
         <group>
           <mesh position={[0, 0.03, 0]}>
             <boxGeometry args={[0.42, 0.04, 0.52]} />
-            <meshStandardMaterial color="#f43f5e" roughness={0.8} />
+            <meshStandardMaterial color="#64748b" roughness={0.8} />
           </mesh>
           <mesh position={[0.08, 0.055, 0.06]}>
             <cylinderGeometry args={[0.06, 0.06, 0.02, 12]} />

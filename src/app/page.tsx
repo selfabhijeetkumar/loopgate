@@ -7,8 +7,10 @@ import { DEFAULT_ASSUMPTIONS } from '@/data/scenario';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { HAZARD_WEIGHT, SAFETY_FLOOR } from '@/engine/gate';
 import { HeroCTAs } from '@/components/HeroCTAs';
+import { ReplayClient } from '@/components/replay/ReplayClient';
 
 import { WorldClient } from '@/components/world/WorldClient';
+import { EvidenceLab } from '@/components/evidence/EvidenceLab';
 
 export const metadata = {
   title: 'Loopgate // Autonomous Uncertainty Gating for High-Speed Materials Recovery',
@@ -40,9 +42,10 @@ export default function HomePage() {
           className="min-h-[85vh] flex items-center py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full"
           aria-labelledby="hero-heading"
         >
-          <div className="max-w-2xl bg-[#090c10]/92 border border-border-subtle p-6 sm:p-8 rounded-[2px] shadow-2xl flex flex-col gap-6">
+          {/* Narrow left column with light scrim so 3D scene is the star */}
+          <div className="max-w-lg lg:max-w-md bg-[#090c10]/75 border border-border-subtle p-5 sm:p-6 rounded-[2px] shadow-2xl flex flex-col gap-4">
             {/* HUD Status Header */}
-            <div className="flex items-center gap-2 border-b border-border-subtle pb-2.5">
+            <div className="flex items-center gap-2 border-b border-border-subtle pb-2">
               <span className="w-2 h-2 bg-amber-500 rounded-none animate-pulse" />
               <span className="text-[11px] font-mono uppercase tracking-widest text-text-secondary">
                 FACILITY-01 // PS-06 SENTINEL // CHAPTER 00
@@ -52,7 +55,7 @@ export default function HomePage() {
             {/* Display Headline */}
             <h1
               id="hero-heading"
-              className="text-3xl sm:text-4xl xl:text-5xl font-display font-bold text-text-primary tracking-tight leading-[1.08]"
+              className="text-2xl sm:text-3xl xl:text-4xl font-display font-bold text-text-primary tracking-tight leading-[1.12]"
             >
               Every item passes the gate. Risky ones{' '}
               <span className="font-serif-italic font-normal text-amber-400">never</span> reach the
@@ -60,21 +63,21 @@ export default function HomePage() {
             </h1>
 
             {/* Core Value Statement */}
-            <p className="text-sm sm:text-base text-text-secondary font-sans leading-relaxed">
+            <p className="text-xs sm:text-sm text-text-secondary font-sans leading-relaxed">
               Routes risky waste before it reaches the compactor. Simulated estimates.
             </p>
 
             {/* Mission Brief — honesty-compliant */}
-            <p className="text-xs sm:text-sm text-text-muted font-sans leading-relaxed">
+            <p className="text-xs text-text-muted font-sans leading-relaxed">
               High-pressure compactors face severe thermal-runaway events when lithium cells or
               pressurized canisters enter municipal baling lines. Loopgate uses model-inferred
               hazard estimation and deterministic uncertainty gating to route ambiguous items for
-              human verification before mechanical compaction.
+              human verification before simulated compaction.
             </p>
 
             {/* Invariant Highlight */}
-            <div className="border border-border-subtle bg-bg-surface p-3.5 rounded-[2px] flex flex-col gap-2">
-              <div className="flex items-center justify-between border-b border-border-subtle pb-1.5">
+            <div className="border border-border-subtle bg-bg-surface/80 p-3 rounded-[2px] flex flex-col gap-1.5">
+              <div className="flex items-center justify-between border-b border-border-subtle pb-1">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-text-secondary font-bold">
                   Core Invariant EA-01
                 </span>
@@ -83,7 +86,7 @@ export default function HomePage() {
               <div className="text-xs font-mono text-amber-400 font-bold">
                 Safety Floor: p(hazard) &ge; {SAFETY_FLOOR.toFixed(2)}
               </div>
-              <div className="text-[11px] font-mono text-text-secondary leading-normal">
+              <div className="text-[10px] font-mono text-text-secondary leading-normal">
                 Items with model-inferred hazard probability at or above{' '}
                 {(SAFETY_FLOOR * 100).toFixed(0)}% are categorically forbidden from reaching the
                 compactor stream under any policy setting.
@@ -127,22 +130,22 @@ export default function HomePage() {
             <div className="md:col-span-6 bg-[#090c10]/92 border border-border-subtle p-6 rounded-[2px] shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                 <span className="text-xs font-mono font-bold text-text-primary">
-                  CHAPTER 01 // OVERHEAD VISION SCAN
+                  CHAPTER 01 // PER-ITEM VISION SCAN
                 </span>
                 <ProvenanceChip provenance="Model-inferred" />
               </div>
               <h3 id="scan-heading" className="text-xl font-display font-bold text-text-primary">
-                Multi-Spectral Surface Scanning
+                Per-Item Vision Scan
               </h3>
               <p className="text-xs sm:text-sm text-text-secondary leading-relaxed font-sans">
-                Overhead vision models isolate per-item bounding crops along the intake conveyor.
+                Vision models isolate per-item bounding crops along the intake conveyor in software.
                 Multi-pass inference estimates primary material classes, detection confidence, and
-                hazard probabilities. All estimates are model-inferred, not direct physical measurements.
+                hazard probabilities. All estimates are model-inferred, not physical measurements.
               </p>
               <div className="pt-3 border-t border-border-subtle text-[11px] font-mono text-text-muted space-y-1">
-                <div>&gt; Pipeline: WASM DETR &amp; Zero-Shot ViT (Simulated)</div>
-                <div>&gt; Intake Resolution: Isolated per-item bounding crops</div>
-                <div>&gt; Telemetry: Sweeping amber planar sensor frustum</div>
+                <div>&gt; Pipeline: Open-vocabulary detection &amp; zero-shot classification (simulated default)</div>
+                <div>&gt; Intake Resolution: Isolated per-item bounding crops in software</div>
+                <div>&gt; Software Telemetry: Sweeping amber planar scan frustum</div>
               </div>
             </div>
           </section>
@@ -162,7 +165,7 @@ export default function HomePage() {
                 <ProvenanceChip provenance="Calculated" />
               </div>
               <h3 id="gate-heading" className="text-xl font-display font-bold text-text-primary">
-                Deterministic Uncertainty Gating
+                Uncertainty Gate
               </h3>
               <p className="text-xs sm:text-sm text-text-secondary leading-relaxed font-sans">
                 The gate formula balances hazard likelihood against epistemic uncertainty:
@@ -171,12 +174,12 @@ export default function HomePage() {
                   gateScore = {HAZARD_WEIGHT} &times; p(haz) + {uncertaintyWeight} &times; uncertainty
                 </span>
                 Items exceeding the active strictness threshold are diverted for human verification
-                before mechanical compaction.
+                before simulated compaction.
               </p>
               <div className="pt-3 border-t border-border-subtle text-[11px] font-mono text-text-muted space-y-1">
                 <div>&gt; Safety Floor: p &ge; {SAFETY_FLOOR.toFixed(3)} (Invariant EA-01 Guaranteed)</div>
                 <div>&gt; Strictness: Dynamic operator threshold &tau; [0.480 to 0.080]</div>
-                <div>&gt; Live Inspection: Real engine calculations for item-08 and ambiguous items</div>
+                <div>&gt; Software Telemetry: Real engine calculations for item-08 and ambiguous items</div>
               </div>
             </div>
           </section>
@@ -191,22 +194,22 @@ export default function HomePage() {
             <div className="md:col-span-6 bg-[#090c10]/92 border border-border-subtle p-6 rounded-[2px] shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-border-subtle pb-2">
                 <span className="text-xs font-mono font-bold text-text-primary">
-                  CHAPTER 03 // DIVERTER &amp; ROUTING
+                  CHAPTER 03 // SIMULATED DIVERTER AND ROUTING
                 </span>
                 <ProvenanceChip provenance="Calculated" />
               </div>
               <h3 id="route-heading" className="text-xl font-display font-bold text-text-primary">
-                High-Speed Sorting Diverter
+                Simulated Diverter and Routing
               </h3>
               <p className="text-xs sm:text-sm text-text-secondary leading-relaxed font-sans">
-                A mechanical diverter arm swings to channel flagged items into the quarantine spur
-                or inspection bay. Clean, verified items continue through to the mechanical compactor
-                and terminal classification bays.
+                A simulated diverter vane channels flagged items into the quarantine spur or
+                inspection bay in software. Low-hazard items continue through to simulated
+                compaction and terminal classification bays.
               </p>
               <div className="pt-3 border-t border-border-subtle text-[11px] font-mono text-text-muted space-y-1">
-                <div>&gt; Hazard Hold: Quarantined lithium pouch cells</div>
-                <div>&gt; Spur Bay: Human-in-the-loop verification desk</div>
-                <div>&gt; Recovery Stream: Recyclable, Reusable, Biodegradable</div>
+                <div>&gt; Hazard Hold: Quarantined lithium pouch cells (simulated)</div>
+                <div>&gt; Spur Bay: Human-in-the-loop verification desk (simulated)</div>
+                <div>&gt; Recovery Stream: Recyclable, Reusable, Biodegradable (simulated)</div>
               </div>
             </div>
           </section>
@@ -221,8 +224,8 @@ export default function HomePage() {
           className="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6"
           aria-labelledby="twin-heading"
         >
-          <div className="bg-[#090c10]/95 border border-border-subtle p-6 rounded-[2px] shadow-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-4">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-4 bg-[#090c10]/80 p-4 rounded-[2px] border">
               <div className="space-y-1">
                 <div className="text-xs font-mono uppercase tracking-widest text-amber-500">
                   Interactive Digital Twin // Chapter 04
@@ -236,9 +239,59 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Twin Interactive Container */}
+            {/* Twin Interactive Container (Transparent Stage + Scrim Controls) */}
             <TwinContainer />
           </div>
+        </section>
+
+        {/* ----------------------------------------------------------------- */}
+        {/* CHAPTER 5: REPLAY THEATRE — Branch A vs Branch B                  */}
+        {/* ----------------------------------------------------------------- */}
+        <section
+          id="replay"
+          className="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6"
+          aria-labelledby="replay-heading"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-4 bg-[#090c10]/80 p-4 rounded-[2px] border">
+            <div className="space-y-1">
+              <div className="text-xs font-mono uppercase tracking-widest text-amber-500">
+                Branch Comparison // Phase 5
+              </div>
+              <h2 id="replay-heading" className="text-2xl sm:text-3xl font-display font-bold text-text-primary">
+                Replay{' '}
+                <span className="font-serif-italic font-normal text-amber-400">Theatre</span>
+              </h2>
+            </div>
+            <div className="text-xs font-mono text-text-muted">
+              Standard Line vs Loopgate // Simulated Scenario
+            </div>
+          </div>
+          <ReplayClient />
+        </section>
+
+        {/* ----------------------------------------------------------------- */}
+        {/* EVIDENCE LAB SECTION: REAL IN-BROWSER CV & LIVE TWIN LINK        */}
+        {/* ----------------------------------------------------------------- */}
+        <section
+          id="evidence"
+          className="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6"
+          aria-labelledby="evidence-heading"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-4 bg-[#090c10]/80 p-4 rounded-[2px] border">
+            <div className="space-y-1">
+              <div className="text-xs font-mono uppercase tracking-widest text-amber-500">
+                Live Vision Pipeline // Real In-Browser Inference
+              </div>
+              <h2 id="evidence-heading" className="text-2xl sm:text-3xl font-display font-bold text-text-primary">
+                Evidence <span className="font-serif-italic font-normal text-amber-400">Lab</span>
+              </h2>
+            </div>
+            <div className="text-xs font-mono text-text-muted">
+              Client-Side OWL-ViT &amp; CLIP // Live Twin Link
+            </div>
+          </div>
+
+          <EvidenceLab />
         </section>
 
         {/* ----------------------------------------------------------------- */}
@@ -382,7 +435,7 @@ export default function HomePage() {
                       </tr>
                     ))}
                     {/* Engine constants row */}
-                    <tr className="border-b border-border-subtle/50">
+                    <tr>
                       <td className="py-2 pr-4 text-text-muted">eng-01</td>
                       <td className="py-2 pr-4 text-text-primary font-bold">Hazard Weight</td>
                       <td className="py-2 pr-4 text-amber-400">{HAZARD_WEIGHT}</td>
@@ -393,19 +446,6 @@ export default function HomePage() {
                       <td className="py-2 text-text-secondary leading-relaxed">
                         Weight given to p(hazard) vs epistemic uncertainty in gate score computation.
                         Uncertainty weight = {uncertaintyWeight}.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4 text-text-muted">eng-02</td>
-                      <td className="py-2 pr-4 text-text-primary font-bold">Safety Floor</td>
-                      <td className="py-2 pr-4 text-amber-400">{SAFETY_FLOOR}</td>
-                      <td className="py-2 pr-4 text-text-secondary">ratio</td>
-                      <td className="py-2 pr-4">
-                        <ProvenanceChip provenance="Configured" showPrefix={false} />
-                      </td>
-                      <td className="py-2 text-text-secondary leading-relaxed">
-                        Hard safety invariant EA-01. Items at or above this p(hazard) are categorically
-                        barred from the compactor stream.
                       </td>
                     </tr>
                   </tbody>

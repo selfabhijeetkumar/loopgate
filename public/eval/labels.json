@@ -1,0 +1,65 @@
+{
+  "_comment_instructions": "EVALUATION DATASET TEMPLATE: Place your 20 to 30 authentic test photographs in public/eval/. Each entry in the 'images' array below represents one photo with ground truth annotations. Fields: 'file' (filename inside public/eval/), 'expectedClass' ('recyclable' | 'reusable' | 'biodegradable' | 'hazardous'), 'hazardous' (boolean: true if contains battery, pressurized canister, or toxic hazard, else false), 'notes' (short descriptive notes). Do NOT scrape, download, or use AI-generated images.",
+  "images": [
+    {
+      "file": "eval_01_water_bottle.jpg",
+      "expectedClass": "recyclable",
+      "hazardous": false,
+      "notes": "Crushed PET clear water bottle"
+    },
+    {
+      "file": "eval_02_aluminum_can.jpg",
+      "expectedClass": "recyclable",
+      "hazardous": false,
+      "notes": "Standard soda beverage can"
+    },
+    {
+      "file": "eval_03_corrugated_cardboard.jpg",
+      "expectedClass": "recyclable",
+      "hazardous": false,
+      "notes": "Brown shipping box fragment"
+    },
+    {
+      "file": "eval_04_power_bank.jpg",
+      "expectedClass": "hazardous",
+      "hazardous": true,
+      "notes": "10000mAh external battery pack"
+    },
+    {
+      "file": "eval_05_disposable_vape.jpg",
+      "expectedClass": "hazardous",
+      "hazardous": true,
+      "notes": "Disposable electronic vape with lithium cell"
+    },
+    {
+      "file": "eval_06_smartphone.jpg",
+      "expectedClass": "hazardous",
+      "hazardous": true,
+      "notes": "Cracked smartphone with swollen pouch cell"
+    },
+    {
+      "file": "eval_07_food_scrap.jpg",
+      "expectedClass": "biodegradable",
+      "hazardous": false,
+      "notes": "Vegetable and fruit peel organic matter"
+    },
+    {
+      "file": "eval_08_denim_cloth.jpg",
+      "expectedClass": "reusable",
+      "hazardous": false,
+      "notes": "Heavy cotton textile work cloth"
+    },
+    {
+      "file": "eval_09_aerosol_can.jpg",
+      "expectedClass": "hazardous",
+      "hazardous": true,
+      "notes": "Pressurized solvent spray canister"
+    },
+    {
+      "file": "eval_10_optical_mouse.jpg",
+      "expectedClass": "reusable",
+      "hazardous": false,
+      "notes": "Standard USB peripheral without battery"
+    }
+  ]
+}

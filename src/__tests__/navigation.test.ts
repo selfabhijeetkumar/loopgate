@@ -40,4 +40,9 @@ describe('Navigation Targets and Integrity', () => {
     expect(headerContent).toContain('{isDev && (');
     expect(headerContent).toContain('/dev/engine');
   });
+
+  it('clears active nav state at hero scroll position to prevent false DECISION highlight', () => {
+    expect(headerContent).toContain('if (window.scrollY < 280)');
+    expect(headerContent).toContain('setActiveSection(null)');
+  });
 });

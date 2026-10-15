@@ -113,7 +113,7 @@ export function Diagram2DFallback({
       {/* SVG Canvas */}
       <div className="w-full overflow-x-auto bg-[#0b0e11] border border-border-subtle/60 p-2 rounded-[2px]">
         <svg
-          viewBox="0 0 800 390"
+          viewBox="0 0 800 420"
           className="w-full h-auto min-w-[720px] select-none font-mono"
           aria-label="2D Facility Schematic of the Loopgate Sorting Line"
         >
@@ -178,7 +178,8 @@ export function Diagram2DFallback({
             .map((s) => {
               const isSelected = selectedItemId === s.item.id;
               const isHazard = s.item.primaryClass === 'hazardous' || s.item.hazardProbability >= 0.30;
-              const color = isSelected ? '#f59e0b' : isHazard ? '#ef4444' : '#38bdf8';
+              // Amber = hazard signal; steel = non-hazard neutral. Red is banned.
+              const color = isSelected ? '#f59e0b' : isHazard ? '#f59e0b' : '#94a3b8';
 
               return (
                 <g
@@ -219,18 +220,15 @@ export function Diagram2DFallback({
             })}
 
           {/* SVG Legend at bottom */}
-          <g transform="translate(40, 368)" fontSize="8" fill="#94a3b8">
-            <circle cx="6" cy="0" r="4" fill="#ef4444" />
-            <text x="14" y="3" fill="#cbd5e1">Hazard (p &ge; 0.30)</text>
+          <g transform="translate(40, 398)" fontSize="8" fill="#94a3b8">
+            <circle cx="6" cy="0" r="4" fill="#f59e0b" />
+            <text x="14" y="3" fill="#cbd5e1">Hazard / Amber Signal</text>
 
-            <circle cx="140" cy="0" r="4" fill="#f59e0b" />
-            <text x="148" y="3" fill="#cbd5e1">Inspection Spur</text>
+            <circle cx="160" cy="0" r="4" fill="#94a3b8" />
+            <text x="168" y="3" fill="#cbd5e1">Non-hazard Stream</text>
 
-            <circle cx="260" cy="0" r="4" fill="#38bdf8" />
-            <text x="268" y="3" fill="#cbd5e1">Classified Stream</text>
-
-            <rect x="380" y="-4" width="8" height="8" fill="none" stroke="#ffffff" strokeWidth="1.5" />
-            <text x="394" y="3" fill="#cbd5e1">Selected Item</text>
+            <rect x="310" y="-4" width="8" height="8" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            <text x="324" y="3" fill="#cbd5e1">Selected Item</text>
           </g>
         </svg>
       </div>

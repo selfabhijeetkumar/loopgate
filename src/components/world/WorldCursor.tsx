@@ -173,16 +173,27 @@ export function WorldCursor({
         )}
       </svg>
 
-      {/* Locked item label */}
+      {/* Locked item label clamped inside viewport */}
       {locked && lockedItemLabel && (
         <div
           style={{
             position: 'fixed',
-            left: s.x + size + 6,
-            top: s.y - 18,
+            left: Math.max(
+              16,
+              Math.min(
+                (typeof window !== 'undefined' ? window.innerWidth : 1280) - 220,
+                s.x > (typeof window !== 'undefined' ? window.innerWidth : 1280) - 240
+                  ? s.x - 220 - size
+                  : s.x + size + 8
+              )
+            ),
+            top: Math.max(
+              16,
+              Math.min((typeof window !== 'undefined' ? window.innerHeight : 800) - 60, s.y - 18)
+            ),
             pointerEvents: 'none',
             zIndex: 9999,
-            background: 'rgba(8,10,14,0.9)',
+            background: 'rgba(8,10,14,0.95)',
             border: `1px solid ${isHazard ? '#f59e0b' : '#475569'}`,
             padding: '3px 6px',
             fontFamily: 'monospace',
@@ -190,6 +201,7 @@ export function WorldCursor({
             color: '#e2e8f0',
             whiteSpace: 'nowrap',
             lineHeight: 1.5,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
           }}
         >
           <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{lockedItemLabel}</span>

@@ -33,6 +33,8 @@ export function TwinContainer({ className = '' }: TwinContainerProps) {
     setSelectedItemId,
     maxDuration,
     triggerCameraReset,
+    activeSource,
+    restoreSimulatedScenario,
   } = useSimulation();
 
   const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
@@ -135,10 +137,18 @@ export function TwinContainer({ className = '' }: TwinContainerProps) {
               FACILITY-01 // SENTINEL DIGITAL TWIN
             </h2>
           </div>
-          <span className="text-[11px] font-mono text-text-muted hidden sm:inline">|</span>
           <span className="text-[11px] font-mono text-text-secondary hidden sm:inline">
-            ACTIVE BATCH: {items.length} ITEMS [SIM]
+            ACTIVE BATCH: {items.length} ITEMS [{activeSource === 'photo' ? 'PHOTO LIVE LINK' : 'SIMULATED'}]
           </span>
+          {activeSource === 'photo' && (
+            <button
+              onClick={restoreSimulatedScenario}
+              className="px-2 py-0.5 text-[10px] font-mono bg-bg-elevated hover:bg-bg-surface border border-border-default text-amber-400 hover:text-amber-300 rounded-[2px] transition-colors"
+              title="Reset twin to default simulated scenario"
+            >
+              [Reset to Simulated]
+            </button>
+          )}
         </div>
 
         {/* Viewport Control Toggles */}
@@ -186,7 +196,11 @@ export function TwinContainer({ className = '' }: TwinContainerProps) {
       {/* ------------------------------------------------------------------- */}
       {/* 2. Main Viewport Stage (Transparent Portal in 3D, SVG in 2D)        */}
       {/* ------------------------------------------------------------------- */}
-      <div className="relative border border-border-subtle bg-bg-surface/50 overflow-hidden rounded-[2px]">
+      <div
+        className={`relative border border-border-subtle overflow-hidden rounded-[2px] transition-colors ${
+          viewMode === '3d' ? 'bg-transparent' : 'bg-bg-surface/90'
+        }`}
+      >
         {/* Reticle HUD Corners */}
         <div className="absolute top-2 left-2 z-10 text-[9px] font-mono text-text-muted select-none pointer-events-none">
           + SENTINEL-01 SYNTHETIC STREAM
@@ -204,11 +218,11 @@ export function TwinContainer({ className = '' }: TwinContainerProps) {
         {/* Viewport Frame */}
         <div className="w-full h-[440px] md:h-[500px] relative">
           {viewMode === '3d' ? (
-            <div className="w-full h-full flex flex-col items-center justify-between p-6 pointer-events-none select-none">
-              <div className="text-[10px] font-mono text-text-muted bg-bg-surface/90 border border-border-subtle px-3 py-1 rounded-[2px]">
+            <div className="w-full h-full flex flex-col items-center justify-between p-4 pointer-events-none select-none">
+              <div className="text-[10px] font-mono text-text-secondary bg-[#090c10]/75 backdrop-blur-sm border border-border-subtle/80 px-3 py-1 rounded-[2px]">
                 3D SENTINEL FACILITY TWIN // INTERACTIVE ORBIT CAMERA ACTIVE
               </div>
-              <div className="text-[10px] font-mono text-amber-400 bg-bg-surface/90 border border-border-subtle px-3 py-1 rounded-[2px]">
+              <div className="text-[10px] font-mono text-amber-400 bg-[#090c10]/75 backdrop-blur-sm border border-border-subtle/80 px-3 py-1 rounded-[2px]">
                 Hover or click any 3D item along the belt to inspect telemetry or trigger manual divert
               </div>
             </div>

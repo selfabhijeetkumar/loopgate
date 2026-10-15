@@ -6,6 +6,8 @@ import { ThemeToggle } from './ThemeToggle';
 
 const NAV_LINKS = [
   { label: 'Twin', href: '#twin' },
+  { label: 'Replay', href: '#replay' },
+  { label: 'Evidence', href: '#evidence' },
   { label: 'Decision', href: '#decision' },
   { label: 'Streams', href: '#streams' },
   { label: 'Assumptions', href: '#assumptions' },
@@ -27,31 +29,36 @@ export function Header() {
   const isDev = process.env.NODE_ENV === 'development';
 
   /* ------------------------------------------------------------------
-   * Scroll-spy: watch section entry via IntersectionObserver
+   * Scroll-spy: robust offset-based tracking with Hero clearance
    * ------------------------------------------------------------------ */
   useEffect(() => {
-    const tracked: IntersectionObserverEntry[] = [];
+    const handleScroll = () => {
+      if (typeof window === 'undefined') return;
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        });
-      },
-      {
-        rootMargin: '-20% 0px -60% 0px', // triggers when section is in upper 40% of viewport
-        threshold: 0,
+      // Clear active section whenever scroll is in the hero area
+      if (window.scrollY < 280) {
+        setActiveSection(null);
+        return;
       }
-    );
 
-    SECTION_IDS.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observerRef.current?.observe(el);
-    });
+      let matched: string | null = null;
+      for (const id of SECTION_IDS) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 240 && rect.bottom >= 140) {
+            matched = id;
+            break;
+          }
+        }
+      }
 
-    return () => observerRef.current?.disconnect();
+      setActiveSection(matched);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {

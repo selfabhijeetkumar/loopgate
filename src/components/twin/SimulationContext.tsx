@@ -11,6 +11,9 @@ export type QualityMode = 'auto' | 'high' | 'medium' | 'low';
 
 export interface SimulationContextValue {
   items: Item[];
+  activeSource: 'simulated' | 'photo';
+  loadPhotoScenario: (photoItems: Item[]) => void;
+  restoreSimulatedScenario: () => void;
   strictnessPct: number;
   setStrictnessPct: (val: number) => void;
   tau: number;
@@ -83,6 +86,25 @@ export function SimulationProvider({
     });
   }, []);
 
+  const [items, setItems] = useState<Item[]>(initialItems);
+  const [activeSource, setActiveSource] = useState<'simulated' | 'photo'>('simulated');
+
+  const loadPhotoScenario = useCallback((photoItems: Item[]) => {
+    setItems(photoItems);
+    setActiveSource('photo');
+    setOverrides({});
+    setCurrentTime(0);
+    setIsPlaying(true);
+  }, []);
+
+  const restoreSimulatedScenario = useCallback(() => {
+    setItems(initialItems);
+    setActiveSource('simulated');
+    setOverrides({});
+    setCurrentTime(0);
+    setIsPlaying(true);
+  }, [initialItems]);
+
   // Policy & simulation result
   const policy: GatePolicy = useMemo(() => {
     return {
@@ -93,8 +115,8 @@ export function SimulationProvider({
   }, [tau]);
 
   const simulationResult = useMemo(() => {
-    return simulateBatch(initialItems, policy, overrides);
-  }, [initialItems, policy, overrides]);
+    return simulateBatch(items, policy, overrides);
+  }, [items, policy, overrides]);
 
   // Timeline & playback
   const [currentTime, setCurrentTime] = useState(0.0);
@@ -115,8 +137,8 @@ export function SimulationProvider({
   }, []);
 
   const maxDuration = useMemo(() => {
-    return initialItems.length * 2.0 + 6.0;
-  }, [initialItems.length]);
+    return items.length * 2.0 + 6.0;
+  }, [items.length]);
 
   // Ticking loop for simulation time
   const lastTimeRef = useRef<number>(performance.now());
@@ -156,7 +178,10 @@ export function SimulationProvider({
   }, [qualityMode]);
 
   const value: SimulationContextValue = {
-    items: initialItems,
+    items,
+    activeSource,
+    loadPhotoScenario,
+    restoreSimulatedScenario,
     strictnessPct,
     setStrictnessPct,
     tau,
