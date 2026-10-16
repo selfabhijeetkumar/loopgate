@@ -13,6 +13,7 @@ import type { Item, MaterialClass, RouteId } from '@/domain/types';
 import { ProvenanceChip } from '@/components/ProvenanceChip';
 import { useSimulation } from '@/components/twin/SimulationContext';
 import { SAFETY_FLOOR, evaluateGate, DEFAULT_GATE_POLICY } from '@/engine/gate';
+import { mapDetectionsToItems } from '@/cv/toItems';
 
 interface EvidenceLabProps {
   className?: string;
@@ -111,7 +112,7 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
     }
   };
 
-  // Load sample intake photo
+  // Load simulated intake sample photo with strictly Simulated provenance
   const handleLoadSamplePhoto = () => {
     const canvas = document.createElement('canvas');
     canvas.width = 640;
@@ -145,11 +146,49 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
       setImageSrc(dataUrl);
       setImageDims({ width: 640, height: 480 });
-      setStatus('idle');
       setErrorMessage(null);
-      setDetections([]);
-      setItems([]);
-      setSelectedId(null);
+
+      // Create synthetic sample items with strictly 'Simulated' provenance (never Model-inferred)
+      const sampleDetections: NormalizedDetection[] = [
+        {
+          id: 'sim-sample-bottle',
+          label: 'bottle',
+          score: 0.94,
+          box: { x: 120 / 640, y: 95 / 480, width: 90 / 640, height: 245 / 480 },
+          clipProbabilities: {
+            recyclable: 0.88,
+            reusable: 0.05,
+            biodegradable: 0.05,
+            hazardous: 0.02,
+            batteryRisk: 0.0,
+          },
+          provenance: 'Simulated',
+        },
+        {
+          id: 'sim-sample-battery',
+          label: 'power bank',
+          score: 0.89,
+          box: { x: 365 / 640, y: 180 / 480, width: 155 / 640, height: 90 / 480 },
+          clipProbabilities: {
+            recyclable: 0.05,
+            reusable: 0.05,
+            biodegradable: 0.05,
+            hazardous: 0.85,
+            batteryRisk: 0.80,
+          },
+          provenance: 'Simulated',
+        },
+      ];
+      const sampleItems = mapDetectionsToItems(sampleDetections);
+      setDetections(sampleDetections);
+      setItems(sampleItems);
+      setSelectedId(sampleItems[0].id);
+      setStatus('analyzed');
+      setInferenceMeta({
+        timeMs: 0,
+        device: 'simulated',
+        model: 'Simulated Benchmark Intake',
+      });
     }
   };
 
@@ -437,7 +476,7 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
             onClick={handleLoadSamplePhoto}
             className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-primary border border-border-default hover:border-amber-500/50 text-text-primary text-xs font-mono rounded-[2px] transition-colors"
           >
-            Sample Photo
+            Load simulated sample
           </button>
 
           <button
@@ -502,15 +541,23 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
       )}
 
       {/* ------------------------------------------------------------------- */}
-      {/* 4. Error Display State                                              */}
+      {/* 4. Designed Real Error Display State                                */}
       {/* ------------------------------------------------------------------- */}
       {errorMessage && (
         <div
           role="alert"
-          className="bg-bg-surface border border-amber-500/50 p-4 rounded-[2px] font-mono text-xs text-amber-300 space-y-1"
+          className="bg-[#12080a] border border-red-500/60 p-4 rounded-[2px] font-mono text-xs text-red-200 space-y-2"
         >
-          <div className="font-bold uppercase tracking-wider text-amber-400">[PIPELINE ADVISORY]</div>
-          <p>{errorMessage}</p>
+          <div className="flex items-center justify-between text-red-400 font-bold uppercase tracking-wider text-[11px]">
+            <span>[CV PIPELINE FAILURE // INFERENCE HALTED]</span>
+            <span className="text-text-muted text-[10px]">INTEGRITY CONTRACT ENFORCED</span>
+          </div>
+          <p className="text-red-300 font-mono text-xs leading-relaxed break-all">{errorMessage}</p>
+          <div className="text-[11px] text-text-secondary pt-1 border-t border-red-500/20 flex flex-wrap gap-x-4 gap-y-1">
+            <span>&bull; Web Worker session stopped safely</span>
+            <span>&bull; Zero fake or simulated metrics created</span>
+            <span className="text-amber-400 font-bold">&bull; You can draw boxes manually using &quot;Add box by hand&quot;</span>
+          </div>
         </div>
       )}
 

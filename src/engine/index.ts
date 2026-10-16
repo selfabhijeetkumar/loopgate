@@ -6,7 +6,7 @@
  */
 
 // Gate evaluation
-export { evaluateGate, DEFAULT_GATE_POLICY, HAZARD_WEIGHT, HAZARD_CONFIDENT_DISAGREEMENT_CUTOFF, SAFETY_FLOOR } from './gate';
+export { evaluateGate, DEFAULT_GATE_POLICY, HAZARD_WEIGHT, UNCERTAINTY_WEIGHT, HAZARD_CONFIDENT_DISAGREEMENT_CUTOFF, SAFETY_FLOOR } from './gate';
 export type { GateInput, GatePolicy, GateDecision, ReasonCode } from './gate';
 
 // Batch simulation

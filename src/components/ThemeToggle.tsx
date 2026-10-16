@@ -51,7 +51,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      title={`Current: ${theme.toUpperCase()} HUD mode`}
+      title={`Current: ${theme.toUpperCase()} mode`}
       className="w-8 h-8 flex items-center justify-center rounded-[2px] border border-border-subtle bg-bg-surface text-text-secondary hover:text-text-primary hover:border-border-strong focus-visible:outline-2 focus-visible:outline-amber-500 transition-colors"
     >
       {theme === 'dark' ? (

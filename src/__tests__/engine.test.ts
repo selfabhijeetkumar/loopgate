@@ -603,4 +603,34 @@ describe('Phase 3C Verification: Single-Source Safety Floor & Slider Labels', ()
     // 100% (Max Inspection) -> 0.080 (not the old wrong 0.100)
     expect(tauMap(100)).toBe(0.080);
   });
+
+  it('guarantees Assumptions table reads single constants (0.30, 0.65, 0.35) from src/engine with zero duplicates', async () => {
+    const { SAFETY_FLOOR, HAZARD_WEIGHT, UNCERTAINTY_WEIGHT } = await import('@/engine');
+    const { DEFAULT_ASSUMPTIONS } = await import('@/data/scenario');
+
+    // 1. Verify single constants values
+    expect(SAFETY_FLOOR).toBe(0.30);
+    expect(HAZARD_WEIGHT).toBe(0.65);
+    expect(UNCERTAINTY_WEIGHT).toBe(0.35);
+
+    // 2. Verify all three are present and match src/engine single source of truth
+    const safetyFloorRow = DEFAULT_ASSUMPTIONS.find((a) => a.label.includes('Safety Floor'));
+    const hazardWeightRow = DEFAULT_ASSUMPTIONS.find((a) => a.label.includes('Hazard Weight'));
+    const uncertaintyWeightRow = DEFAULT_ASSUMPTIONS.find((a) => a.label.includes('Uncertainty Weight'));
+
+    expect(safetyFloorRow).toBeDefined();
+    expect(safetyFloorRow?.value).toBe(SAFETY_FLOOR);
+
+    expect(hazardWeightRow).toBeDefined();
+    expect(hazardWeightRow?.value).toBe(HAZARD_WEIGHT);
+
+    expect(uncertaintyWeightRow).toBeDefined();
+    expect(uncertaintyWeightRow?.value).toBe(UNCERTAINTY_WEIGHT);
+
+    // 3. Verify zero duplicate IDs or labels
+    const ids = DEFAULT_ASSUMPTIONS.map((a) => a.id);
+    const labels = DEFAULT_ASSUMPTIONS.map((a) => a.label);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
 });

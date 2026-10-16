@@ -96,12 +96,12 @@ export const ENGINE_ASSUMPTIONS: EngineAssumption[] = [
   },
   {
     id: 'ea-08',
-    label: 'Compactor Fire Cost',
+    label: 'Simulated Incident Cost',
     value: 45000,
     unit: 'USD/incident',
     description:
       'Estimated direct cost (mechanical damage, downtime, emergency response) per ' +
-      'compactor battery thermal event. Labeled estimate; not an actuarial figure.',
+      'compactor battery thermal event in this simulated scenario. Labeled estimate; not an actuarial figure.',
     provenance: 'Configured',
   },
   {

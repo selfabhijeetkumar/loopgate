@@ -5,20 +5,18 @@ import { TwinContainer } from '@/components/twin/TwinContainer';
 import { SimulationProvider } from '@/components/twin/SimulationContext';
 import { DEFAULT_ASSUMPTIONS } from '@/data/scenario';
 import { ScrollReveal } from '@/components/ScrollReveal';
-import { HAZARD_WEIGHT, SAFETY_FLOOR } from '@/engine/gate';
 import { HeroCTAs } from '@/components/HeroCTAs';
 import { ReplayClient } from '@/components/replay/ReplayClient';
 
 import { WorldClient } from '@/components/world/WorldClient';
 import { EvidenceLab } from '@/components/evidence/EvidenceLab';
+import { SAFETY_FLOOR, HAZARD_WEIGHT, UNCERTAINTY_WEIGHT } from '@/engine';
 
 export const metadata = {
   title: 'Loopgate // Autonomous Uncertainty Gating for High-Speed Materials Recovery',
   description:
     'Routes risky waste before it reaches the compactor. Simulated estimates for municipal materials recovery facilities.',
 };
-
-const uncertaintyWeight = +(1 - HAZARD_WEIGHT).toFixed(2);
 
 export default function HomePage() {
   return (
@@ -171,7 +169,7 @@ export default function HomePage() {
                 The gate formula balances hazard likelihood against epistemic uncertainty:
                 <br />
                 <span className="font-mono text-amber-300 text-xs mt-1 block">
-                  gateScore = {HAZARD_WEIGHT} &times; p(haz) + {uncertaintyWeight} &times; uncertainty
+                  gateScore = {HAZARD_WEIGHT} &times; p(haz) + {UNCERTAINTY_WEIGHT} &times; uncertainty
                 </span>
                 Items exceeding the active strictness threshold are diverted for human verification
                 before simulated compaction.
@@ -362,7 +360,7 @@ export default function HomePage() {
                   </div>
                   <p className="text-xs text-text-secondary font-sans leading-relaxed">
                     Lithium pouch cells, vape batteries, power banks, damaged electronics, and
-                    pressurized cylinders. Primary compactor fire hazards.
+                    pressurized cylinders. Primary simulated hazard scenario.
                   </p>
                   <div className="text-[10px] font-mono text-amber-500 font-semibold">
                     Target: Quarantine Vault / Spur Bay
@@ -434,20 +432,6 @@ export default function HomePage() {
                         <td className="py-2 text-text-secondary leading-relaxed">{asm.description}</td>
                       </tr>
                     ))}
-                    {/* Engine constants row */}
-                    <tr>
-                      <td className="py-2 pr-4 text-text-muted">eng-01</td>
-                      <td className="py-2 pr-4 text-text-primary font-bold">Hazard Weight</td>
-                      <td className="py-2 pr-4 text-amber-400">{HAZARD_WEIGHT}</td>
-                      <td className="py-2 pr-4 text-text-secondary">ratio</td>
-                      <td className="py-2 pr-4">
-                        <ProvenanceChip provenance="Configured" showPrefix={false} />
-                      </td>
-                      <td className="py-2 text-text-secondary leading-relaxed">
-                        Weight given to p(hazard) vs epistemic uncertainty in gate score computation.
-                        Uncertainty weight = {uncertaintyWeight}.
-                      </td>
-                    </tr>
                   </tbody>
                 </table>
               </div>

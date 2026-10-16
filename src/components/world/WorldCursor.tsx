@@ -98,7 +98,8 @@ export function WorldCursor({
 
   const s = stateRef.current;
   const locked = !!lockedItemId;
-  const size = locked ? 28 : 18;
+  // Scaled down by 25% (was 28 / 18 -> now 21 / 13.5)
+  const size = locked ? 21 : 13.5;
   const color = isHazard ? '#f59e0b' : '#94a3b8';
   const ringColor = locked ? '#f59e0b' : color;
   const speed = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
@@ -135,7 +136,7 @@ export function WorldCursor({
         {[0, 1, 2, 3, 4, 5].map((i) => {
           const a0 = (i / 6) * Math.PI * 2;
           const a1 = ((i + 1) / 6) * Math.PI * 2;
-          const r = size - 3;
+          const r = size - 2.5;
           const x0 = Math.cos(a0) * r;
           const y0 = Math.sin(a0) * r;
           const x1 = Math.cos(a1) * r;
@@ -145,30 +146,30 @@ export function WorldCursor({
               key={i}
               x1={x0} y1={y0} x2={x1} y2={y1}
               stroke={ringColor}
-              strokeWidth={locked ? 1.5 : 1}
+              strokeWidth={locked ? 1.2 : 0.8}
               opacity={0.7 + (i % 2) * 0.3}
             />
           );
         })}
-        {/* Core dot */}
-        <circle cx={0} cy={0} r={locked ? 3.5 : 2} fill={ringColor} opacity={0.9} />
+        {/* Core dot (scaled down 25%) */}
+        <circle cx={0} cy={0} r={locked ? 2.6 : 1.5} fill={ringColor} opacity={0.9} />
         {/* Tilt axis line */}
         <line
           x1={0} y1={0}
-          x2={Math.cos(s.tilt) * (size - 5)} y2={Math.sin(s.tilt) * (size - 5)}
-          stroke={ringColor} strokeWidth={0.6} opacity={0.4}
+          x2={Math.cos(s.tilt) * (size - 4)} y2={Math.sin(s.tilt) * (size - 4)}
+          stroke={ringColor} strokeWidth={0.5} opacity={0.4}
         />
-        {/* Corner brackets when locked */}
+        {/* Corner brackets when locked (scaled down 25%) */}
         {locked && (
           <>
             {/* Top-left bracket */}
-            <path d={`M ${-size+4} ${-size+8} L ${-size+4} ${-size+4} L ${-size+8} ${-size+4}`} stroke="#f59e0b" strokeWidth={1.5} />
+            <path d={`M ${-size+3} ${-size+6} L ${-size+3} ${-size+3} L ${-size+6} ${-size+3}`} stroke="#f59e0b" strokeWidth={1.2} />
             {/* Top-right bracket */}
-            <path d={`M ${size-8} ${-size+4} L ${size-4} ${-size+4} L ${size-4} ${-size+8}`} stroke="#f59e0b" strokeWidth={1.5} />
+            <path d={`M ${size-6} ${-size+3} L ${size-3} ${-size+3} L ${size-3} ${-size+6}`} stroke="#f59e0b" strokeWidth={1.2} />
             {/* Bottom-left bracket */}
-            <path d={`M ${-size+4} ${size-8} L ${-size+4} ${size-4} L ${-size+8} ${size-4}`} stroke="#f59e0b" strokeWidth={1.5} />
+            <path d={`M ${-size+3} ${size-6} L ${-size+3} ${size-3} L ${-size+6} ${size-3}`} stroke="#f59e0b" strokeWidth={1.2} />
             {/* Bottom-right bracket */}
-            <path d={`M ${size-8} ${size-4} L ${size-4} ${size-4} L ${size-4} ${size-8}`} stroke="#f59e0b" strokeWidth={1.5} />
+            <path d={`M ${size-6} ${size-3} L ${size-3} ${size-3} L ${size-3} ${size-6}`} stroke="#f59e0b" strokeWidth={1.2} />
           </>
         )}
       </svg>

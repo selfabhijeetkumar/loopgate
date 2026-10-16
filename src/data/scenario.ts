@@ -1,13 +1,13 @@
 import type { Item, EngineConfig, Assumption } from '../domain/types';
-import { SAFETY_FLOOR } from '../engine/gate';
+import { SAFETY_FLOOR, HAZARD_WEIGHT, UNCERTAINTY_WEIGHT } from '../engine';
 
 export const DEFAULT_ASSUMPTIONS: Assumption[] = [
   {
     id: 'asm-01',
-    label: 'Compactor Fire Cost',
+    label: 'Simulated Incident Cost',
     value: 45000,
     unit: 'USD',
-    description: 'Estimated direct mechanical loss, downtime, and emergency response cost per compactor battery fire incident.',
+    description: 'Estimated direct mechanical loss, downtime, and emergency response cost per compactor battery thermal incident in this simulated scenario.',
     provenance: 'Simulated',
   },
   {
@@ -32,6 +32,22 @@ export const DEFAULT_ASSUMPTIONS: Assumption[] = [
     value: SAFETY_FLOOR,
     unit: 'ratio',
     description: `Hard safety floor (invariant EA-01): any item with estimated hazard probability >= ${SAFETY_FLOOR} is categorically barred from the compactor stream under any policy setting.`,
+    provenance: 'Configured',
+  },
+  {
+    id: 'asm-05',
+    label: 'Hazard Weight',
+    value: HAZARD_WEIGHT,
+    unit: 'ratio',
+    description: `Weight given to p(hazard) vs epistemic uncertainty in gate score computation. Canonical constant in src/engine.`,
+    provenance: 'Configured',
+  },
+  {
+    id: 'asm-06',
+    label: 'Uncertainty Weight',
+    value: UNCERTAINTY_WEIGHT,
+    unit: 'ratio',
+    description: `Weight given to epistemic uncertainty in gate score computation (1 - Hazard Weight = ${UNCERTAINTY_WEIGHT}). Canonical constant in src/engine.`,
     provenance: 'Configured',
   },
 ];

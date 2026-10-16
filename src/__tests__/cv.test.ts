@@ -200,3 +200,33 @@ describe('CV Pipeline: Gemini "Raise Only" Rule', () => {
     expect(item.assignedRoute).not.toBe('compactor');
   });
 });
+
+describe('CV Pipeline State Machine: Failure Handling & Inference Gating', () => {
+  it('blocks inference and rejects immediately when pipeline load state is failed', async () => {
+    const { ComputerVisionPipeline } = await import('@/cv/pipeline');
+    const pipeline = new ComputerVisionPipeline();
+
+    // Manually simulate a session creation failure (e.g. WebGPU/WASM Cast node error)
+    (pipeline as any).state = 'failed';
+    (pipeline as any).lastError = "Can't create session: Provider type for Cast node is not set";
+
+    // Attempting inference MUST reject immediately without attempting to call worker/inference
+    await expect(pipeline.analyze('data:image/jpeg;base64,fake')).rejects.toThrow(
+      /Model loading failed: Can't create session: Provider type for Cast node is not set/
+    );
+  });
+
+  it('guarantees that uninitialized/failed pipeline reports failed state and real error', async () => {
+    const { ComputerVisionPipeline } = await import('@/cv/pipeline');
+    const pipeline = new ComputerVisionPipeline();
+
+    (pipeline as any).state = 'failed';
+    (pipeline as any).lastError = 'WebGPU unsupported on this device';
+
+    expect(pipeline.getState()).toBe('failed');
+    expect(pipeline.getLastError()).toBe('WebGPU unsupported on this device');
+    const info = pipeline.getModelInfo();
+    expect(info.state).toBe('failed');
+  });
+});
+

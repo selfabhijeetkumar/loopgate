@@ -23,6 +23,8 @@ import { FacilityLine } from '../twin/FacilityLine';
 import { ItemGeometry } from '../twin/ItemMesh';
 import type { QualityTier } from './qualityTier';
 import { TIER_CONFIGS } from './qualityTier';
+import { Starfield } from './Starfield';
+import { CameraMotionSmoother } from './cameraSmoothing';
 
 // ---------------------------------------------------------------------------
 // Types & Interfaces
@@ -473,6 +475,7 @@ function FloorWithRipple({
           uniform float uTime;
           uniform float uRippleStrength;
           varying vec2 vUv;
+          varying vec2 vWorldPos;
           varying float vDist;
           varying float vWave;
 
@@ -484,6 +487,7 @@ function FloorWithRipple({
             float dz = -pos.y - uPointer.z;
             float dist = sqrt(dx * dx + dz * dz);
             vDist = dist;
+            vWorldPos = pos.xy;
 
             float wave = 0.0;
             if (dist < 12.0 && uRippleStrength > 0.001) {
@@ -499,6 +503,7 @@ function FloorWithRipple({
           uniform vec3 uGridColor;
           uniform vec3 uHighlightColor;
           varying vec2 vUv;
+          varying vec2 vWorldPos;
           varying float vDist;
           varying float vWave;
 
@@ -511,7 +516,14 @@ function FloorWithRipple({
             if (vDist < 10.0 && abs(vWave) > 0.004) {
               base = mix(base, uHighlightColor, smoothstep(0.004, 0.05, abs(vWave)) * 0.3);
             }
-            gl_FragColor = vec4(base, 1.0);
+
+            // Horizon fade into deep background #070a0d (0.02745, 0.0392, 0.05098)
+            float distFromCenter = length(vWorldPos);
+            float horizonFade = smoothstep(22.0, 11.0, distFromCenter);
+            vec3 bgCol = vec3(0.02745, 0.0392, 0.05098);
+            vec3 finalColor = mix(bgCol, base, horizonFade);
+
+            gl_FragColor = vec4(finalColor, 1.0);
           }
         `}
       />
@@ -574,8 +586,161 @@ function LightSweep({ reducedMotion }: { reducedMotion: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
-// Chapter 2: Gate Telemetry Display for item-08 & ambiguous item
+// Scroll-Revealed Floating HUD Readouts with Leader Lines & Provenance Chips
 // ---------------------------------------------------------------------------
+
+function Chapter0HeroReadout({ items }: { items: Item[] }) {
+  return (
+    <group position={[-3.5, 2.2, 1.2]}>
+      {/* 3D leader line from HUD card down to belt surface */}
+      <line>
+        <bufferGeometry
+          attach="geometry"
+          onUpdate={(geo) => {
+            geo.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -1.3, -1.2)]);
+          }}
+        />
+        <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
+      </line>
+      <Html distanceFactor={7.5} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
+        <div
+          style={{
+            background: 'rgba(8,10,14,0.96)',
+            border: '1px solid #334155',
+            borderLeft: '3px solid #f59e0b',
+            padding: '8px 12px',
+            fontFamily: 'monospace',
+            fontSize: 9,
+            color: '#e2e8f0',
+            width: 230,
+            maxWidth: 'calc(100vw - 32px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
+          }}
+        >
+          <div
+            style={{
+              color: '#fbbf24',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #334155',
+              paddingBottom: 4,
+              marginBottom: 6,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span>INGEST // BELT ACTIVE</span>
+            <span
+              style={{
+                background: '#0284c7',
+                color: '#f0f9ff',
+                fontSize: 8,
+                padding: '1px 5px',
+                borderRadius: 2,
+                fontWeight: 700,
+              }}
+            >
+              [CALCULATED]
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 3, fontSize: 8.5 }}>
+            <div>
+              MANIFEST ITEMS:{' '}
+              <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{items.length} TRACKED</span>
+            </div>
+            <div>
+              EA-01 SAFETY FLOOR:{' '}
+              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>&ge; 0.30 P(HAZ) DIVERT</span>
+            </div>
+            <div>
+              LINE VELOCITY: <span style={{ color: '#10b981' }}>1.2 m/s CONSTANT</span>
+            </div>
+          </div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function Chapter1ScanReadout({ items, isScanning }: { items: Item[]; isScanning: boolean }) {
+  const avgConfidence =
+    items.reduce((acc, it) => acc + (it.overallConfidence ?? 0.85), 0) / Math.max(1, items.length);
+  const meanConfidence = Math.round(avgConfidence * 100);
+
+  return (
+    <group position={[-4.2, 2.7, 0.4]}>
+      {/* 3D leader line down to scanner arch */}
+      <line>
+        <bufferGeometry
+          attach="geometry"
+          onUpdate={(geo) => {
+            geo.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -1.5, -0.4)]);
+          }}
+        />
+        <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
+      </line>
+      <Html distanceFactor={7.0} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
+        <div
+          style={{
+            background: 'rgba(8,10,14,0.96)',
+            border: '1px solid #334155',
+            borderLeft: '3px solid #f59e0b',
+            padding: '8px 12px',
+            fontFamily: 'monospace',
+            fontSize: 9,
+            color: '#e2e8f0',
+            width: 230,
+            maxWidth: 'calc(100vw - 32px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
+          }}
+        >
+          <div
+            style={{
+              color: '#fbbf24',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #334155',
+              paddingBottom: 4,
+              marginBottom: 6,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span>STAGE 01 // SCAN PROPOSALS</span>
+            <span
+              style={{
+                background: '#475569',
+                color: '#f8fafc',
+                fontSize: 8,
+                padding: '1px 5px',
+                borderRadius: 2,
+                fontWeight: 700,
+              }}
+            >
+              [SIMULATED]
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 3, fontSize: 8.5 }}>
+            <div>
+              SURFACE SCANNER:{' '}
+              <span style={{ color: isScanning ? '#f59e0b' : '#10b981', fontWeight: 'bold' }}>
+                {isScanning ? 'SWEEPING (AMBER)' : 'STANDBY READY'}
+              </span>
+            </div>
+            <div>
+              ANALYZED PROPOSALS:{' '}
+              <span style={{ color: '#38bdf8' }}>{items.length} STREAM OBJECTS</span>
+            </div>
+            <div>
+              MEAN CONFIDENCE:{' '}
+              <span style={{ color: '#10b981', fontWeight: 'bold' }}>{meanConfidence}%</span>
+            </div>
+          </div>
+        </div>
+      </Html>
+    </group>
+  );
+}
 
 function Chapter2GateReadout({
   items,
@@ -594,19 +759,31 @@ function Chapter2GateReadout({
   const itemAmbiguousDec = decisions.find((d) => d.itemId === 'item-04');
 
   return (
-    <group position={[0.8, 2.2, 0.4]}>
-      {/* 3D Diverter Telemetry HUD */}
+    <group position={[0.2, 2.2, 0.4]}>
+      {/* 3D leader line down to diverter pivot */}
+      <line>
+        <bufferGeometry
+          attach="geometry"
+          onUpdate={(geo) => {
+            geo.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.2, -1.2, -0.4)]);
+          }}
+        />
+        <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
+      </line>
       <Html distanceFactor={6.5} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
         <div
           style={{
             background: 'rgba(8,10,14,0.96)',
             border: '1px solid #f59e0b',
+            borderLeft: '3px solid #f59e0b',
             padding: '8px 12px',
             fontFamily: 'monospace',
             fontSize: 9,
             color: '#e2e8f0',
-            width: 240,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            width: 250,
+            maxWidth: 'calc(100vw - 32px)',
+            transform: 'translateX(clamp(-90px, 0px, 0px))',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
           }}
         >
           <div
@@ -618,23 +795,56 @@ function Chapter2GateReadout({
               marginBottom: 6,
               display: 'flex',
               justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
             <span>STAGE 02 // GATE DECISION</span>
-            <span>ARM: {diverterAngle > 0.3 ? 'EXTENDED' : 'RETRACTED'}</span>
+            <span
+              style={{
+                background: '#0284c7',
+                color: '#f0f9ff',
+                fontSize: 8,
+                padding: '1px 5px',
+                borderRadius: 2,
+                fontWeight: 700,
+              }}
+            >
+              [CALCULATED]
+            </span>
+          </div>
+
+          <div style={{ marginBottom: 4, fontSize: 8, color: '#94a3b8' }}>
+            DIVERTER ARM:{' '}
+            <span
+              style={{
+                color: diverterAngle > 0.3 ? '#ef4444' : '#10b981',
+                fontWeight: 'bold',
+              }}
+            >
+              {diverterAngle > 0.3 ? 'EXTENDED (DIVERT)' : 'RETRACTED'}
+            </span>
           </div>
 
           {/* Item 08 readout */}
           {item08 && item08Dec && (
             <div style={{ marginBottom: 6, borderBottom: '1px solid #1e293b', paddingBottom: 4 }}>
               <div style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                ITEM-08: {item08.name.slice(0, 24)}...
+                ITEM-08: {item08.name.slice(0, 22)}...
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, fontSize: 8 }}>
-                <div>p(haz): <span style={{ color: '#ef4444' }}>{(item08.hazardProbability * 100).toFixed(1)}%</span></div>
+                <div>
+                  p(haz):{' '}
+                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                    {(item08.hazardProbability * 100).toFixed(1)}%
+                  </span>
+                </div>
                 <div>gateScore: {item08Dec.gateScore.toFixed(3)}</div>
-                <div>route: <span style={{ color: '#fbbf24' }}>{item08Dec.route}</span></div>
-                <div>floorTrigger: <span style={{ color: '#ef4444' }}>TRUE (EA-01)</span></div>
+                <div>
+                  route: <span style={{ color: '#fbbf24' }}>{item08Dec.route}</span>
+                </div>
+                <div>
+                  floorTrigger: <span style={{ color: '#ef4444' }}>TRUE (EA-01)</span>
+                </div>
               </div>
             </div>
           )}
@@ -643,13 +853,17 @@ function Chapter2GateReadout({
           {itemAmbiguous && itemAmbiguousDec && (
             <div>
               <div style={{ color: '#93c5fd', fontWeight: 'bold' }}>
-                ITEM-04: {itemAmbiguous.name.slice(0, 24)}...
+                ITEM-04: {itemAmbiguous.name.slice(0, 22)}...
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, fontSize: 8 }}>
                 <div>p(haz): {(itemAmbiguous.hazardProbability * 100).toFixed(1)}%</div>
                 <div>gateScore: {itemAmbiguousDec.gateScore.toFixed(3)}</div>
-                <div>route: <span style={{ color: '#fbbf24' }}>{itemAmbiguousDec.route}</span></div>
-                <div>uncertainty: <span style={{ color: '#38bdf8' }}>HIGH (DISPUTED)</span></div>
+                <div>
+                  route: <span style={{ color: '#fbbf24' }}>{itemAmbiguousDec.route}</span>
+                </div>
+                <div>
+                  uncertainty: <span style={{ color: '#38bdf8' }}>HIGH (DISPUTED)</span>
+                </div>
               </div>
             </div>
           )}
@@ -659,8 +873,206 @@ function Chapter2GateReadout({
   );
 }
 
+function Chapter3RouteReadout({ decisions }: { decisions: ItemDecision[] }) {
+  const hazardHoldCount = decisions.filter((d) => d.route === 'hazard_hold').length;
+  const inspectionCount = decisions.filter((d) => d.route === 'inspection_line').length;
+  const recyclableBayCount = decisions.filter((d) => d.route === 'recyclable_bay').length;
+  const compactorCount = decisions.filter(
+    (d) => d.route === 'recyclable_bay' || d.route === 'biodegradable_bay'
+  ).length;
+
+  return (
+    <group position={[4.0, 2.6, 0.6]}>
+      {/* 3D leader line down to compactor chute */}
+      <line>
+        <bufferGeometry
+          attach="geometry"
+          onUpdate={(geo) => {
+            geo.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.2, -1.6, -0.6)]);
+          }}
+        />
+        <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
+      </line>
+      <Html distanceFactor={7.0} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
+        <div
+          style={{
+            background: 'rgba(8,10,14,0.96)',
+            border: '1px solid #334155',
+            borderLeft: '3px solid #f59e0b',
+            padding: '8px 12px',
+            fontFamily: 'monospace',
+            fontSize: 9,
+            color: '#e2e8f0',
+            width: 240,
+            maxWidth: 'calc(100vw - 32px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
+          }}
+        >
+          <div
+            style={{
+              color: '#fbbf24',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #334155',
+              paddingBottom: 4,
+              marginBottom: 6,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span>STAGE 03 // ROUTE AUDIT</span>
+            <span
+              style={{
+                background: '#0284c7',
+                color: '#f0f9ff',
+                fontSize: 8,
+                padding: '1px 5px',
+                borderRadius: 2,
+                fontWeight: 700,
+              }}
+            >
+              [CALCULATED]
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, fontSize: 8 }}>
+            <div>
+              HAZARD HOLD:{' '}
+              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{hazardHoldCount}</span>
+            </div>
+            <div>
+              INSPECTION:{' '}
+              <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{inspectionCount}</span>
+            </div>
+            <div>
+              RECYCLABLE:{' '}
+              <span style={{ color: '#10b981', fontWeight: 'bold' }}>{recyclableBayCount}</span>
+            </div>
+            <div>
+              COMPACTOR:{' '}
+              <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{compactorCount}</span>
+            </div>
+          </div>
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 7.5,
+              color: '#94a3b8',
+              borderTop: '1px solid #1e293b',
+              paddingTop: 4,
+            }}
+          >
+            In this simulated scenario: zero battery thermal events reach the compactor stream.
+          </div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function Chapter5StreamsReadout({
+  items,
+  decisions,
+}: {
+  items: Item[];
+  decisions: ItemDecision[];
+}) {
+  const recyclableCount = items.filter((i) => i.primaryClass === 'recyclable').length;
+  const reusableCount = items.filter((i) => i.primaryClass === 'reusable').length;
+  const compostCount = items.filter((i) => i.primaryClass === 'biodegradable').length;
+  const hazardCount = decisions.filter((d) => d.route === 'hazard_hold').length;
+  const total = Math.max(1, items.length);
+  const diversionPct = (((items.length - hazardCount) / total) * 100).toFixed(1);
+
+  return (
+    <group position={[0.0, 3.8, 1.0]}>
+      {/* 3D leader line down to facility center line */}
+      <line>
+        <bufferGeometry
+          attach="geometry"
+          onUpdate={(geo) => {
+            geo.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -2.5, -1.0)]);
+          }}
+        />
+        <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
+      </line>
+      <Html distanceFactor={8.0} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
+        <div
+          style={{
+            background: 'rgba(8,10,14,0.96)',
+            border: '1px solid #334155',
+            borderLeft: '3px solid #f59e0b',
+            padding: '8px 12px',
+            fontFamily: 'monospace',
+            fontSize: 9,
+            color: '#e2e8f0',
+            width: 250,
+            maxWidth: 'calc(100vw - 32px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
+          }}
+        >
+          <div
+            style={{
+              color: '#fbbf24',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #334155',
+              paddingBottom: 4,
+              marginBottom: 6,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span>STAGE 05 // STREAM TOTALS</span>
+            <span
+              style={{
+                background: '#0284c7',
+                color: '#f0f9ff',
+                fontSize: 8,
+                padding: '1px 5px',
+                borderRadius: 2,
+                fontWeight: 700,
+              }}
+            >
+              [CALCULATED]
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, fontSize: 8 }}>
+            <div>
+              RECYCLABLE:{' '}
+              <span style={{ color: '#10b981', fontWeight: 'bold' }}>{recyclableCount}</span>
+            </div>
+            <div>
+              REUSABLE:{' '}
+              <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{reusableCount}</span>
+            </div>
+            <div>
+              COMPOST:{' '}
+              <span style={{ color: '#a3e635', fontWeight: 'bold' }}>{compostCount}</span>
+            </div>
+            <div>
+              HAZARD ISOLATED:{' '}
+              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{hazardCount}</span>
+            </div>
+          </div>
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 8,
+              color: '#f59e0b',
+              borderTop: '1px solid #1e293b',
+              paddingTop: 4,
+            }}
+          >
+            TOTAL STREAM RETENTION: {diversionPct}%
+          </div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// 3D Faceted Cursor Probe rendered directly in WebGL
+// 3D Faceted Cursor Probe rendered directly in WebGL (scaled down 25%)
 // ---------------------------------------------------------------------------
 
 function CursorProbe3D({
@@ -703,9 +1115,9 @@ function CursorProbe3D({
 
   return (
     <group ref={probeRef}>
-      {/* Outer faceted hexagonal ring */}
+      {/* Outer faceted hexagonal ring (scaled down 25%) */}
       <mesh ref={spinRef}>
-        <torusGeometry args={[0.08, 0.009, 6, 6]} />
+        <torusGeometry args={[0.06, 0.00675, 6, 6]} />
         <meshBasicMaterial
           color={isInteractive ? '#f59e0b' : '#94a3b8'}
           wireframe
@@ -713,9 +1125,9 @@ function CursorProbe3D({
           opacity={0.8}
         />
       </mesh>
-      {/* Core sphere */}
+      {/* Core sphere (scaled down 25%) */}
       <mesh>
-        <sphereGeometry args={[0.016, 8, 8]} />
+        <sphereGeometry args={[0.012, 8, 8]} />
         <meshBasicMaterial color={isInteractive ? '#f59e0b' : '#cbd5e1'} />
       </mesh>
     </group>
@@ -798,30 +1210,37 @@ function CameraRig({
   reducedMotion,
 }: CameraRigProps) {
   const { camera, size } = useThree();
-  const currentPos = useRef(new THREE.Vector3().copy(CHAPTER_CAMERA_STATES[0].position));
-  const currentTarget = useRef(new THREE.Vector3().copy(CHAPTER_CAMERA_STATES[0].target));
-  const currentFov = useRef(CHAPTER_CAMERA_STATES[0].fov);
+  const smootherRef = useRef<CameraMotionSmoother | null>(null);
+  if (!smootherRef.current) {
+    smootherRef.current = new CameraMotionSmoother(
+      CHAPTER_CAMERA_STATES[0].position,
+      CHAPTER_CAMERA_STATES[0].target,
+      CHAPTER_CAMERA_STATES[0].fov
+    );
+  }
 
   useFrame((_, delta) => {
-    const lerpSpeed = reducedMotion ? 0.35 : Math.min(1, delta * 3.8);
-
-    currentPos.current.lerp(targetPosition.current, lerpSpeed);
-    currentTarget.current.lerp(targetLookAt.current, lerpSpeed);
-    currentFov.current += (targetFov.current - currentFov.current) * lerpSpeed;
-
-    const px = parallaxOffset.current.x * 1.4;
-    const py = parallaxOffset.current.y * 0.8;
-    const finalPos = currentPos.current.clone().add(new THREE.Vector3(px, py, 0));
-
-    camera.position.copy(finalPos);
-    camera.lookAt(currentTarget.current);
-
     // Dynamic FOV scaling for narrow viewports (< 1.1 aspect ratio) so entire line is visible
     const aspect = size.width / Math.max(1, size.height);
     const aspectScale = aspect < 1.1 ? Math.min(1.5, 1.1 / Math.max(0.4, aspect)) : 1.0;
-    const effectiveFov = currentFov.current * aspectScale;
+    const effectiveFov = targetFov.current * aspectScale;
 
-    (camera as THREE.PerspectiveCamera).fov = effectiveFov;
+    const px = parallaxOffset.current.x * 1.4;
+    const py = parallaxOffset.current.y * 0.8;
+    const posWithParallax = targetPosition.current.clone().add(new THREE.Vector3(px, py, 0));
+
+    const state = smootherRef.current!.step(
+      posWithParallax,
+      targetLookAt.current,
+      effectiveFov,
+      delta,
+      reducedMotion
+    );
+
+    camera.position.copy(state.position);
+    camera.lookAt(state.target);
+
+    (camera as THREE.PerspectiveCamera).fov = state.fov;
     (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
   });
 
@@ -932,6 +1351,14 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
       <color attach="background" args={['#070a0d']} />
       <fog attach="fog" args={['#070a0d', 26, 54]} />
 
+      {/* Night-sky Starfield Backdrop with 3 depth layers & twinkling cool stars */}
+      <Starfield
+        tier={tier}
+        reducedMotion={reducedMotion}
+        parallaxOffset={parallaxOffset}
+        scrollProgress={chapter / 5}
+      />
+
       {/* Lighting: boosted ambient, hemisphere, warm key, and facility rim lights */}
       <hemisphereLight args={['#dbeafe', '#1e293b', chapter >= 5 ? 0.45 : 0.85]} />
       <ambientLight intensity={chapter >= 5 ? 0.35 : 0.75} />
@@ -999,7 +1426,9 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
         {/* Hero floating hazards in Chapter 0 */}
         {chapter === 0 && <HeroFloatingHazards reducedMotion={reducedMotion} />}
 
-        {/* Chapter 2 Gate Telemetry Display */}
+        {/* Scroll-revealed floating HUD data tags with leader lines & provenance chips */}
+        {chapter === 0 && <Chapter0HeroReadout items={items} />}
+        {chapter === 1 && <Chapter1ScanReadout items={items} isScanning={isAnyScanning} />}
         {chapter === 2 && (
           <Chapter2GateReadout
             items={items}
@@ -1007,6 +1436,8 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
             diverterAngle={diverterAngle}
           />
         )}
+        {chapter === 3 && <Chapter3RouteReadout decisions={decisions} />}
+        {chapter === 5 && <Chapter5StreamsReadout items={items} decisions={decisions} />}
 
         {/* Ambient belt animation */}
         <AmbientBeltAnimation reducedMotion={reducedMotion} />

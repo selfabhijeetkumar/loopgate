@@ -32,6 +32,9 @@ import type { MaterialClass, RouteId } from '../domain/types';
 /** Weight given to hazardProbability vs uncertainty in gate score computation. */
 export const HAZARD_WEIGHT = 0.65;
 
+/** Weight given to epistemic uncertainty in gate score computation: 1 - HAZARD_WEIGHT = 0.35. */
+export const UNCERTAINTY_WEIGHT = 0.35;
+
 /**
  * Hard safety floor. Items with hazardProbability >= SAFETY_FLOOR are categorically
  * barred from the compactor stream under any policy setting (invariant EA-01).
