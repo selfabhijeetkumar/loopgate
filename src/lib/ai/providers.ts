@@ -142,7 +142,7 @@ async function callOpenAICompatible(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://loopgate.vercel.app',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://loopgate-rose.vercel.app',
         'X-Title': 'Loopgate Waste Router',
       },
       body: JSON.stringify({
