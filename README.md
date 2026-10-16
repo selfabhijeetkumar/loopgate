@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://loopgate-rose.vercel.app"><img alt="Live demo" src="https://img.shields.io/badge/LIVE_DEMO-open-F59E0B?style=for-the-badge&labelColor=0D0F11"></a>
   <a href="https://drive.google.com/file/d/1pLgAQpbXV4SrrxNPbeDg-kZPvdneoefh/view?usp=sharing"><img alt="Demo video" src="https://img.shields.io/badge/DEMO_VIDEO-watch-E2E8F0?style=for-the-badge&labelColor=0D0F11"></a>
-  <a href="SLIDES_URL_HERE"><img alt="Slides" src="https://img.shields.io/badge/SLIDES-view-94A3B8?style=for-the-badge&labelColor=0D0F11"></a>
+  <a href=""C:\Users\Abhijeet\Downloads\Loopgate (1) (1).pptx""><img alt="Slides" src="https://img.shields.io/badge/SLIDES-view-94A3B8?style=for-the-badge&labelColor=0D0F11"></a>
 </p>
 
 <p align="center">
