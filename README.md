@@ -590,7 +590,7 @@ Built for **DSU Code Clash 2.0, Problem Statement 06**.
 | Member | Role |
 |---|---|
 | Abhijeet Kumar | Team lead. Concept and system design, engineering direction, integration, testing and deployment. |
-| Vaishnavi Isrannanvar | Quality testing: tested the deployed site on her own devices and reported issues.<br>KEEP ONLY IF TRUE: Test photos: took the object photos for the evaluation set with her own phone.<br>KEEP ONLY IF TRUE: Content review: read the FAQ, README and slides for clarity and errors.<br>KEEP ONLY IF TRUE: Demo video: recorded or narrated part of the demo video. |
+| Vaishnavi Isrannanvar | Quality testing: tested the deployed site on her own devices and reported issues.<br>Test photos: took the object photos for the evaluation set with her own phone.<br>Content review: read the FAQ, README and slides for clarity and errors.<br>Demo video: recorded or narrated part of the demo video. |
 
 **How this was built:** the concept, design and engineering decisions were made by the team lead. The code was produced with AI-assisted development tools (Antigravity) under his direction.
 
