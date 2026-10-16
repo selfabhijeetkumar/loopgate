@@ -1,9 +1,58 @@
 # Loopgate
 
 > **Uncertainty-Gated Waste Routing (Simulated Digital Twin)**  
-> Problem Statement 06 // DSU Code Clash 2.0
+> Problem Statement 06 // DSU Code Clash 2.0  
+> **Live Demo:** [https://loopgate-rose.vercel.app](https://loopgate-rose.vercel.app)  
+> **Team:** NEXARC | **Repository:** [selfabhijeetkumar/loopgate](https://github.com/selfabhijeetkumar/loopgate)
 
 Loopgate is an epistemic uncertainty router and 3D digital twin that identifies and intercepts hazardous waste items (lithium-ion batteries, vape pens, aerosol canisters) before they reach automated municipal baling compactors.
+
+---
+
+## Architecture
+
+```mermaid
+graph TD
+    A[Conveyor Stream Input] --> B[In-Browser Perception Engine]
+    B --> C[Object Detection: DETR ResNet-50]
+    B --> D[Zero-Shot Verification: CLIP ViT]
+    C --> E[Uncertainty Estimator]
+    D --> E
+    E --> F[Epistemic Gate Calculation<br>gateScore = 0.65·P_hazard + 0.35·Uncertainty]
+    F --> G{P_hazard >= 0.30<br>Safety Floor EA-01}
+    G -- Yes (Hard Floor) --> H[Hazardous Hold Stream]
+    G -- No --> I{gateScore >= Threshold}
+    I -- Yes --> J[Human Inspection Lane]
+    I -- No --> K[Class Bay / Compactor Stream]
+    
+    style H fill:#e74c3c,stroke:#c0392b,color:#fff
+    style J fill:#f39c12,stroke:#d68910,color:#fff
+    style K fill:#2ecc71,stroke:#27ae60,color:#fff
+```
+
+---
+
+## Live Screenshots
+
+| 01. Hero & Digital Twin | 02. Scan & Gate Split View |
+|:---:|:---:|
+| ![Hero View](docs/screenshots/01-hero.png) | ![Scan & Gate](docs/screenshots/02-scan-and-gate.png) |
+
+| 03. Interactive 3D Twin | 04. Replay Theatre |
+|:---:|:---:|
+| ![3D Twin](docs/screenshots/03-interactive-twin.png) | ![Replay](docs/screenshots/04-replay.png) |
+
+| 05. Evidence Lab Real CV | 06. GenAI Explanation Engine |
+|:---:|:---:|
+| ![Evidence Lab](docs/screenshots/05-evidence-lab-sample.png) | ![GenAI Explainer](docs/screenshots/06-genai-explainer.png) |
+
+| 07. FAQ & Auditing | 08. About & Team NEXARC |
+|:---:|:---:|
+| ![FAQ](docs/screenshots/07-faq.png) | ![About Team](docs/screenshots/08-about.png) |
+
+| 09. Mobile View (375px) | 10. Mobile 3D Canvas Responsive |
+|:---:|:---:|
+| ![Mobile Hero](docs/screenshots/09-mobile-hero.png) | ![Mobile Twin](docs/screenshots/10-mobile-twin.png) |
 
 ---
 
@@ -28,7 +77,7 @@ Loopgate is an epistemic uncertainty router and 3D digital twin that identifies 
 
 ---
 
-## Getting Started
+## Getting Started & Reproduction Steps
 
 ### Prerequisites
 - Node.js 18+ (tested on Node 20+)
@@ -36,7 +85,7 @@ Loopgate is an epistemic uncertainty router and 3D digital twin that identifies 
 
 ### Installation
 ```bash
-git clone https://github.com/Abhijeet-droid/loopgate.git
+git clone https://github.com/selfabhijeetkumar/loopgate.git
 cd loopgate
 npm install
 ```
@@ -55,7 +104,7 @@ npm run typecheck
 # Lint
 npm run lint
 
-# Unit and integration tests (Vitest)
+# Unit and integration tests (Vitest - 114 passing tests)
 npm test
 
 # Production build
@@ -66,3 +115,4 @@ npm run build
 
 ## License
 Private repository for DSU Code Clash 2.0 evaluation.
+

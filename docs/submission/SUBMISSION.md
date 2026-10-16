@@ -14,7 +14,7 @@
 
 | Field | Value |
 |---|---|
-| **Live Demo URL** | https://loopgate.vercel.app *(deployed separately)* |
+| **Live Demo URL** | https://loopgate-rose.vercel.app |
 | **Demo Video URL** | *(included in submission package)* |
 | **PPT File Name** | *(included in submission package)* |
 | **GitHub Repository URL** | https://github.com/selfabhijeetkumar/loopgate |

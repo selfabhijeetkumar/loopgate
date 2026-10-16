@@ -18,7 +18,7 @@
 
 | Resource | Link |
 |----------|------|
-| **Live App** | https://loopgate.vercel.app *(deployed separately)* |
+| **Live App** | https://loopgate-rose.vercel.app |
 | **GitHub Repo** | https://github.com/selfabhijeetkumar/loopgate |
 | **README** | [README.md](./README.md) |
 | **Video Demo** | *(included in submission package)* |

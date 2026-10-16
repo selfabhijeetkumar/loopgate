@@ -43,7 +43,7 @@ All variables are **server-side only** (no `NEXT_PUBLIC_` prefix for secrets).
 
 | Variable | Example |
 |---|---|
-| `NEXT_PUBLIC_SITE_URL` | `https://loopgate.vercel.app` |
+| `NEXT_PUBLIC_SITE_URL` | `https://loopgate-rose.vercel.app` |
 
 > Set this to the **exact** production URL Vercel assigns (or your custom domain).  
 > Without it, Open Graph images and the sitemap will use `http://localhost:3000`.
