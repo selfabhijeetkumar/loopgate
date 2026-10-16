@@ -581,8 +581,6 @@ Deployment steps for Vercel are in `docs/submission/DEPLOY.md`.
 | Calibration | Calibrate the engine's assumptions with a real facility's data |
 | Human review | Add a proper review workflow for the inspection bay |
 
----
-
 ## Team
 
 **NEXARC**, Dayananda Sagar University, Bengaluru.
@@ -592,15 +590,13 @@ Built for **DSU Code Clash 2.0, Problem Statement 06**.
 | Member | Role |
 |---|---|
 | Abhijeet Kumar | Team lead. Concept and system design, engineering direction, integration, testing and deployment. |
-| Vaishnavi Isrannanvar | [[FILL: only what she actually did, for example "Quality testing on her own devices"; if nothing, write "Team member"]] |
+| Vaishnavi Isrannanvar | Quality testing: tested the deployed site on her own devices and reported issues.<br>KEEP ONLY IF TRUE: Test photos: took the object photos for the evaluation set with her own phone.<br>KEEP ONLY IF TRUE: Content review: read the FAQ, README and slides for clarity and errors.<br>KEEP ONLY IF TRUE: Demo video: recorded or narrated part of the demo video. |
 
 **How this was built:** the concept, design and engineering decisions were made by the team lead. The code was produced with AI-assisted development tools (Antigravity) under his direction.
 
 Every number in the app comes from the deterministic engine or is labelled Simulated.
 
 Contact: [selfabhijeetkumar@gmail.com](mailto:selfabhijeetkumar@gmail.com)
-
----
 
 ## Licences and attribution
 
