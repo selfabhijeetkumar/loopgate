@@ -67,7 +67,7 @@ export function EvalHarness() {
 
         // Check if image files are accessible
         const missing: string[] = [];
-        for (const it of itemsList.slice(0, 5)) {
+        for (const it of itemsList) {
           try {
             const imgRes = await fetch(`/eval/${it.file}`, { method: 'HEAD' });
             if (!imgRes.ok) missing.push(it.file);
@@ -84,7 +84,7 @@ export function EvalHarness() {
   }, []);
 
   const runEvaluation = async () => {
-    if (labels.length === 0) return;
+    if (!evalSetLoaded || labels.length === 0) return;
     setIsRunning(true);
     setResults([]);
     setMetrics(null);
@@ -114,13 +114,9 @@ export function EvalHarness() {
           predictedHazard = topItem.hazardProbability;
           assignedRoute = topItem.assignedRoute;
         }
-      } catch {
-        // Fallback for missing or unreadable files
-        latency = 120;
-        latencies.push(latency);
-        predictedClass = item.expectedClass; // Deterministic neutral
-        predictedHazard = item.hazardous ? 0.85 : 0.05;
-        assignedRoute = item.hazardous ? 'hazard_hold' : 'recyclable_bay';
+      } catch (err) {
+        console.error(`Evaluation failed for image ${imagePath}:`, err);
+        continue;
       }
 
       const isAbstained = assignedRoute === 'inspection_line';
@@ -269,49 +265,34 @@ export function EvalHarness() {
       </div>
 
       {/* ------------------------------------------------------------------- */}
-      {/* 2. Run Trigger & Progress Bar                                       */}
+      {/* 2. Run Trigger & Progress Bar (Only when eval dataset loaded)       */}
       {/* ------------------------------------------------------------------- */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-surface border border-border-subtle p-3 rounded-[2px] font-mono text-xs">
-        <div className="flex items-center gap-3">
-          <button
-            disabled={isRunning || !evalSetLoaded}
-            onClick={runEvaluation}
-            id="run-eval-btn"
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-bg-primary font-bold uppercase tracking-wider rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {isRunning
-              ? `Evaluating [${currentIndex}/${labels.length}]...`
-              : evalSetLoaded
-              ? 'Run Evaluation'
-              : 'No eval set loaded'}
-          </button>
-          <span className="text-text-muted">
-            {evalSetLoaded
-              ? `${labels.length} image targets configured in dataset template`
-              : 'Waiting for validation photos in public/eval/'}
-          </span>
-        </div>
-
-        {isRunning && (
-          <div className="w-48 h-2 bg-bg-primary border border-border-subtle overflow-hidden rounded-[2px]">
-            <div
-              className="h-full bg-amber-500 transition-all duration-200"
-              style={{ width: `${(currentIndex / labels.length) * 100}%` }}
-            />
+      {evalSetLoaded && (
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-surface border border-border-subtle p-3 rounded-[2px] font-mono text-xs">
+          <div className="flex items-center gap-3">
+            <button
+              disabled={isRunning}
+              onClick={runEvaluation}
+              id="run-eval-btn"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-bg-primary font-bold uppercase tracking-wider rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {isRunning
+                ? `Evaluating [${currentIndex}/${labels.length}]...`
+                : 'Run Evaluation'}
+            </button>
+            <span className="text-text-muted">
+              {labels.length} image targets configured in dataset template
+            </span>
           </div>
-        )}
-      </div>
 
-      {/* ------------------------------------------------------------------- */}
-      {/* 3. Metrics Summary Cards (Observed Numbers)                         */}
-      {/* ------------------------------------------------------------------- */}
-      {!metrics && !evalSetLoaded && (
-        <div className="bg-bg-surface border border-dashed border-border-subtle p-8 rounded-[2px] text-center font-mono space-y-2">
-          <div className="text-text-muted text-xs uppercase tracking-wider">Metrics Unavailable</div>
-          <div className="text-sm font-bold text-text-secondary">No eval set loaded</div>
-          <p className="text-[11px] text-text-muted max-w-md mx-auto">
-            Place 20 to 30 ground-truth photos into <code className="text-amber-400">public/eval/</code> and click &apos;Run Evaluation&apos; to measure observed accuracy and recall.
-          </p>
+          {isRunning && (
+            <div className="w-48 h-2 bg-bg-primary border border-border-subtle overflow-hidden rounded-[2px]">
+              <div
+                className="h-full bg-amber-500 transition-all duration-200"
+                style={{ width: `${(currentIndex / labels.length) * 100}%` }}
+              />
+            </div>
+          )}
         </div>
       )}
 

@@ -18,6 +18,7 @@ import {
   NO_GATE_POLICY,
   type CompareResult,
   type BranchSnapshot,
+  type GatePolicy,
 } from '@/engine';
 import { DEFAULT_GATE_POLICY, SAFETY_FLOOR } from '@/engine/gate';
 import { ProvenanceChip } from '@/components/ProvenanceChip';
@@ -40,6 +41,7 @@ interface ReplayTheatreProps {
   simulatedItems?: Item[];
   photoItems?: Item[] | null;
   activeSource?: 'simulated' | 'photo';
+  threshold?: number;
   className?: string;
 }
 
@@ -337,6 +339,8 @@ export function ReplayTheatre({
   items = [],
   simulatedItems = [],
   photoItems = null,
+  activeSource = 'simulated',
+  threshold = 0.28,
   className = '',
 }: ReplayTheatreProps) {
   const [batchMode, setBatchMode] = useState<'simulated' | 'photo'>('simulated');
@@ -363,11 +367,15 @@ export function ReplayTheatre({
     );
   }, [batchMode, activeItems]);
 
-  // Compute branch comparison once per items change (only when items present)
+  // Compute branch comparison once per items/threshold change (only when items present)
   const compare: CompareResult | null = useMemo(() => {
     if (activeItems.length === 0) return null;
-    return compareBranches(activeItems, NO_GATE_POLICY, DEFAULT_GATE_POLICY);
-  }, [activeItems]);
+    const activeGatePolicy: GatePolicy = {
+      ...DEFAULT_GATE_POLICY,
+      inspectionThreshold: threshold,
+    };
+    return compareBranches(activeItems, NO_GATE_POLICY, activeGatePolicy);
+  }, [activeItems, threshold]);
 
   // Which items are hazardous in Branch A at the compactor phase?
   const hazardAtCompactorIds = useMemo(() => {
@@ -660,7 +668,7 @@ export function ReplayTheatre({
       )}
 
       {/* GenAI Explanation & Personalized Recommendations (PS06) */}
-      <GenAiExplainer items={activeItems} decisions={gated?.decisions || []} />
+      <GenAiExplainer items={activeItems} decisions={gated?.decisions || []} threshold={threshold} />
 
       {/* Audit Trail */}
       <div className="flex flex-col gap-3 border-t border-border-subtle pt-5">

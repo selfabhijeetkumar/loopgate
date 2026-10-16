@@ -12,13 +12,15 @@ import { SYNTHETIC_SCENARIO_ITEMS } from '@/data/scenario';
 import { ReplayTheatre } from './ReplayTheatre';
 
 export function ReplayClient() {
-  const { items, photoItems, activeSource } = useSimulation();
+  const { items, photoItems, activeSource, tau, policy } = useSimulation();
+  const activeThreshold = tau ?? policy?.inspectionThreshold ?? 0.28;
   return (
     <ReplayTheatre
       items={items}
       simulatedItems={SYNTHETIC_SCENARIO_ITEMS}
       photoItems={photoItems}
       activeSource={activeSource}
+      threshold={activeThreshold}
     />
   );
 }

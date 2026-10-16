@@ -14,12 +14,21 @@ import type { EngineExplanationInput } from './explainTemplates';
 import { getTemplateExplanation } from './explainTemplates';
 import { validateGeneratedExplanation } from './numberValidator';
 
+export interface ProviderDiagnostic {
+  name: string;
+  model: string;
+  configured: boolean;
+  attempted: boolean;
+  result: 'ok' | 'rejected_by_validator' | 'timeout' | 'not_configured' | 'cooling_down' | 'not_attempted' | string;
+}
+
 export interface ProviderResult {
   explanation: string;
   source: 'template' | 'ai';
   provider?: string;
   cached?: boolean;
   model?: string;
+  diagnostics?: ProviderDiagnostic[];
 }
 
 // In-memory 5-minute cooldown tracking
@@ -221,6 +230,31 @@ export async function generateExplanationWithChain(
   const startTime = Date.now();
   const MAX_CHAIN_BUDGET_MS = 12000;
 
+  // Safe Diagnostics tracking (names and models only, ZERO keys logged or returned)
+  const diagnostics: ProviderDiagnostic[] = [
+    {
+      name: 'Google Gemini',
+      model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+      configured: Boolean(process.env.GEMINI_API_KEY),
+      attempted: false,
+      result: process.env.GEMINI_API_KEY ? 'not_attempted' : 'not_configured',
+    },
+    {
+      name: 'Groq',
+      model: process.env.GROQ_MODEL || 'qwen/qwen3.8-27b',
+      configured: Boolean(process.env.GROQ_API_KEY),
+      attempted: false,
+      result: process.env.GROQ_API_KEY ? 'not_attempted' : 'not_configured',
+    },
+    {
+      name: 'OpenRouter',
+      model: process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-lightning:free',
+      configured: Boolean(process.env.OPENROUTER_API_KEY),
+      attempted: false,
+      result: process.env.OPENROUTER_API_KEY ? 'not_attempted' : 'not_configured',
+    },
+  ];
+
   // Build candidate provider chain based on configured keys
   interface ProviderCandidate {
     name: string;
@@ -297,15 +331,21 @@ export async function generateExplanationWithChain(
 
   // Iterate through available candidates
   for (const candidate of candidates) {
+    const diag = diagnostics.find((d) => d.name === candidate.name);
+
     // Check remaining total time budget
     if (Date.now() - startTime > MAX_CHAIN_BUDGET_MS) {
+      if (diag && !diag.attempted) diag.result = 'timeout';
       break;
     }
 
     // Skip if cooling down
     if (isProviderCoolingDown(candidate.name)) {
+      if (diag) diag.result = 'cooling_down';
       continue;
     }
+
+    if (diag) diag.attempted = true;
 
     try {
       const rawText = await candidate.execute();
@@ -313,10 +353,13 @@ export async function generateExplanationWithChain(
       // Deterministic Number Validation
       const validation = validateGeneratedExplanation(rawText, input);
       if (!validation.valid) {
-        // Output invented numbers -> put on cooldown and failover
+        if (diag) diag.result = 'rejected_by_validator';
         setProviderCooldown(candidate.name);
         continue;
       }
+
+      if (diag) diag.result = 'ok';
+      console.log('[Loopgate Explainer Diagnostics]', JSON.stringify(diagnostics));
 
       // Validated successfully
       return {
@@ -324,16 +367,29 @@ export async function generateExplanationWithChain(
         source: 'ai',
         provider: candidate.name,
         model: candidate.model,
+        diagnostics,
       };
-    } catch {
+    } catch (err: unknown) {
+      if (diag) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        if (errorMsg.includes('timeout') || errorMsg.includes('abort')) {
+          diag.result = 'timeout';
+        } else {
+          const statusMatch = errorMsg.match(/HTTP (\d+)/i) || errorMsg.match(/(\d{3})/);
+          diag.result = statusMatch ? `http_${statusMatch[1]}` : 'error';
+        }
+      }
       // Network/HTTP error or timeout -> cooldown and try next candidate
       setProviderCooldown(candidate.name);
     }
   }
 
+  console.log('[Loopgate Explainer Diagnostics]', JSON.stringify(diagnostics));
+
   // Fallback: Deterministic Template Explanation
   return {
     explanation: getTemplateExplanation(input),
     source: 'template',
+    diagnostics,
   };
 }

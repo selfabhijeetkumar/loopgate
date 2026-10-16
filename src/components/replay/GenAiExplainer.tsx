@@ -24,7 +24,7 @@ interface GenAiExplainerProps {
 export function GenAiExplainer({
   items,
   decisions,
-  threshold = 0.30,
+  threshold = 0.28,
   className = '',
 }: GenAiExplainerProps) {
   const [profile, setProfile] = useState<UserProfile>('household');
@@ -38,7 +38,7 @@ export function GenAiExplainer({
   // Auto-generate deterministic explanation whenever inputs change
   useEffect(() => {
     handleGenerate(true);
-  }, [selectedItemId, profile, items, decisions]);
+  }, [selectedItemId, profile, items, decisions, threshold]);
 
   const handleGenerate = async (fallbackOnly = false) => {
     setNotice(null);

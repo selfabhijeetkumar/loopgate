@@ -134,11 +134,15 @@ export async function POST(req: NextRequest) {
       timestamp: Date.now(),
     });
 
+    const isDev = process.env.NODE_ENV === 'development';
+    const showDebug = isDev || req.headers.get('x-debug-diagnostic') === '1';
+
     return NextResponse.json({
       explanation: result.explanation,
       source: result.source,
       provider: result.provider,
       cached: false,
+      ...(showDebug && { diagnostics: result.diagnostics }),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Internal Server Error';
