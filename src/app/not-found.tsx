@@ -12,7 +12,7 @@ export default function NotFound() {
       <div className="max-w-md w-full border border-border-subtle bg-bg-surface p-6 sm:p-8 rounded-[2px] space-y-6">
         <div className="flex items-center justify-between border-b border-border-subtle pb-4">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-amber-500 rounded-full" />
+            <span className="w-2.5 h-2.5 bg-amber-500 rounded-[2px]" />
             <span className="text-xs font-mono uppercase tracking-widest text-text-secondary">
               Routing Fault // 404
             </span>
@@ -34,13 +34,20 @@ export default function NotFound() {
           <div>STATUS: HALTED_ON_INVALID_COORDINATE</div>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 flex flex-col gap-2">
           <Link
             href="/"
             className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-mono text-xs uppercase tracking-wider font-bold rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-amber-500"
           >
             Return to Command Center
           </Link>
+          <div className="flex items-center justify-center gap-4 text-xs font-mono text-text-muted pt-2">
+            <Link href="/about" className="hover:text-amber-400">About</Link>
+            <span>/</span>
+            <Link href="/faq" className="hover:text-amber-400">FAQ</Link>
+            <span>/</span>
+            <Link href="/contact" className="hover:text-amber-400">Contact</Link>
+          </div>
         </div>
       </div>
     </div>

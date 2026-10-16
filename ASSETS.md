@@ -1,41 +1,71 @@
-# Asset Inventory and Provenance Register
+# ASSETS.md — Third-Party Asset Registry
 
-This document tracks all external and local assets used within the **Loopgate** system (Event: DSU Code Clash 2.0, Problem Statement 06).
-In strict adherence to the project rules: **no scraped images, no downloaded third-party photo datasets, no AI-generated slop imagery, and no unauthorized proprietary assets** are permitted.
-
----
-
-## 1. Evaluation Image Dataset (`public/eval/`)
-
-| Asset Path | Material Class | Description / Ground Truth | Provenance | Source / License |
-| :--- | :--- | :--- | :--- | :--- |
-| `public/eval/eval_01_water_bottle.jpg` | recyclable | Crushed PET clear beverage bottle | Observed | Operator captured photograph |
-| `public/eval/eval_02_aluminum_can.jpg` | recyclable | Standard aluminum soda beverage can | Observed | Operator captured photograph |
-| `public/eval/eval_03_corrugated_cardboard.jpg` | recyclable | Brown corrugated shipping cardboard box scrap | Observed | Operator captured photograph |
-| `public/eval/eval_04_power_bank.jpg` | hazardous | 10,000mAh external lithium battery pack | Observed | Operator captured photograph |
-| `public/eval/eval_05_disposable_vape.jpg` | hazardous | Disposable vape pen with internal lithium cell | Observed | Operator captured photograph |
-| `public/eval/eval_06_smartphone.jpg` | hazardous | Discarded cracked smartphone with lithium battery | Observed | Operator captured photograph |
-| `public/eval/eval_07_food_scrap.jpg` | biodegradable | Mixed vegetable and fruit peel food scrap | Observed | Operator captured photograph |
-| `public/eval/eval_08_denim_cloth.jpg` | reusable | Heavy denim cloth / cotton textile fragment | Observed | Operator captured photograph |
-| `public/eval/eval_09_aerosol_can.jpg` | hazardous | Pressurized solvent spray canister | Observed | Operator captured photograph |
-| `public/eval/eval_10_optical_mouse.jpg` | reusable | USB optical computer mouse (non-battery peripheral) | Observed | Operator captured photograph |
-
-*Dataset Rules*: All images in `public/eval/` are authentic photos captured personally by the project author on standard consumer smartphone hardware. Metadata and ground truth annotations are defined in [`public/eval/labels.json`](file:///public/eval/labels.json).
+All third-party libraries, models, and assets used in Loopgate are listed below.
+Original application code (src/) is © 2026 Abhijeet Kumar, Apache 2.0.
 
 ---
 
-## 2. In-Browser Machine Learning Models
+## JavaScript / TypeScript Libraries
 
-| Component | Architecture / Checkpoint | Hosting / Provider | License | Execution Target |
-| :--- | :--- | :--- | :--- | :--- |
-| Open-Vocabulary Detector | `Xenova/owlvit-base-patch32` | Hugging Face Hub (CDN cached) | Apache-2.0 | Client-side Web Worker (WebGPU / WASM) |
-| Zero-Shot Classifier | `Xenova/clip-vit-base-patch32` | Hugging Face Hub (CDN cached) | MIT | Client-side Web Worker (WebGPU / WASM) |
-| Runtime Engine | `@huggingface/transformers` v3 | NPM | Apache-2.0 | Pure browser runtime; 0 paid API cost |
+| Package | Version | License | Repository |
+|---------|---------|---------|-----------|
+| next | 15.x | MIT | https://github.com/vercel/next.js |
+| react | 19.x | MIT | https://github.com/facebook/react |
+| react-dom | 19.x | MIT | https://github.com/facebook/react |
+| @react-three/fiber | 9.x | MIT | https://github.com/pmndrs/react-three-fiber |
+| @react-three/drei | 10.x | MIT | https://github.com/pmndrs/drei |
+| three | 0.170.x | MIT | https://github.com/mrdoob/three.js |
+| @huggingface/transformers | 3.x | Apache-2.0 | https://github.com/huggingface/transformers.js |
+| gsap | 3.x | GSAP Standard License | https://greensock.com/gsap/ |
+| tailwindcss | 4.x | MIT | https://github.com/tailwindlabs/tailwindcss |
+| typescript | 5.x | Apache-2.0 | https://github.com/microsoft/typescript |
+| vitest | 3.x | MIT | https://github.com/vitest-dev/vitest |
+
+> **Note on GSAP:** The free GSAP Standard License allows use in free and open-source projects.
+> ScrollTrigger is bundled with the main `gsap` package. No Club GreenSock plugins are used.
 
 ---
 
-## 3. 3D World & Procedural Geometries
+## Machine Learning Models
 
-All 3D assets in the digital twin (`FacilityLine`, `WorldScene`, `ItemGeometry`, `Compactor`, `DiverterArm`, and sorting bays) are procedurally constructed using pure Three.js primitive geometries (`boxGeometry`, `cylinderGeometry`, `planeGeometry`).
-No external 3D mesh files (.obj, .gltf, .fbx) or copyrighted textures are imported.
-Photo tiles riding the conveyor belt are generated directly in-browser by cropping the user's uploaded evidence photograph.
+| Model | License | Source |
+|-------|---------|--------|
+| Xenova/detr-resnet-50 | Apache-2.0 | https://huggingface.co/Xenova/detr-resnet-50 |
+| Xenova/clip-vit-base-patch32 | MIT | https://huggingface.co/Xenova/clip-vit-base-patch32 |
+
+Model weights are fetched at runtime from the Hugging Face CDN and cached in the
+browser Cache API. They are not bundled with the application.
+
+---
+
+## ONNX Runtime Web (via @huggingface/transformers)
+
+ONNX Runtime Web WASM binaries are included under:
+- MIT License
+- Copyright (c) Microsoft Corporation
+- https://github.com/microsoft/onnxruntime
+
+The `.wasm` files are served from `/public/ort/` (copied from `onnxruntime-web/dist/`).
+
+---
+
+## Fonts (Google Fonts via next/font)
+
+| Font | License |
+|------|---------|
+| Space Grotesk | SIL OFL 1.1 |
+| JetBrains Mono | SIL OFL 1.1 |
+| Instrument Serif | SIL OFL 1.1 |
+
+Fonts are loaded via Google Fonts CDN at build time via `next/font/google`.
+
+---
+
+## Icons and SVGs
+
+All icons in the application are authored inline as SVG elements in TSX.
+No third-party icon library is used.
+
+---
+
+*Last updated: October 2026*

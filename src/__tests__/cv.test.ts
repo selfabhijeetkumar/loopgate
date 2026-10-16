@@ -70,7 +70,7 @@ describe('CV Pipeline: toItems Mapping', () => {
     expect(item.hazardProbability).toBe(0.05);
     expect(item.provenance).toBe('Model-inferred');
     expect(item.detections).toHaveLength(2);
-    expect(item.detections[0].source).toBe('owlvit-base-patch32');
+    expect(item.detections[0].source).toBe('detr-resnet-50');
     expect(item.detections[1].source).toBe('clip-vit-base-patch32');
   });
 

@@ -21,6 +21,7 @@ import {
 } from '@/engine';
 import { DEFAULT_GATE_POLICY, SAFETY_FLOOR } from '@/engine/gate';
 import { ProvenanceChip } from '@/components/ProvenanceChip';
+import { GenAiExplainer } from './GenAiExplainer';
 import {
   createAuditEvent,
   loadAuditLog,
@@ -657,6 +658,9 @@ export function ReplayTheatre({
       </div>
         </>
       )}
+
+      {/* GenAI Explanation & Personalized Recommendations (PS06) */}
+      <GenAiExplainer items={activeItems} decisions={gated?.decisions || []} />
 
       {/* Audit Trail */}
       <div className="flex flex-col gap-3 border-t border-border-subtle pt-5">

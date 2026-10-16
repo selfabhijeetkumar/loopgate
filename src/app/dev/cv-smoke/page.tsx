@@ -152,7 +152,7 @@ export default function CvSmokePage() {
     reader.readAsDataURL(file);
   };
 
-  const runTest = async (testType: 'CLIP' | 'OWL_VIT_Q8' | 'OWL_VIT_FP32' | 'DETR_COCO') => {
+  const runTest = async (testType: 'CLIP' | 'DETR_Q8' | 'DETR_FP32' | 'DETR_COCO') => {
     if (!selectedImage) return;
     setActiveTest(testType);
     setErrorMessage(null);
@@ -176,9 +176,9 @@ export default function CvSmokePage() {
     }
   };
 
-  const runFullChainTest = async (detector: 'Xenova/owlvit-base-patch32' | 'Xenova/detr-resnet-50') => {
+  const runFullChainTest = async (detector: 'Xenova/detr-resnet-50') => {
     if (!selectedImage) return;
-    setActiveTest(`FULL_CHAIN_${detector.includes('detr') ? 'DETR' : 'OWL'}`);
+    setActiveTest('FULL_CHAIN_DETR');
     setErrorMessage(null);
     setSmokeResult(null);
     setFullChainResult(null);
@@ -283,23 +283,23 @@ export default function CvSmokePage() {
               </button>
 
               <button
-                id="smoke-owlvit-q8-btn"
-                onClick={() => runTest('OWL_VIT_Q8')}
+                id="smoke-detr-q8-btn"
+                onClick={() => runTest('DETR_Q8')}
                 disabled={!!activeTest}
                 className="w-full py-2 px-3 bg-bg-elevated hover:bg-border-default border border-border-subtle text-text-primary text-xs uppercase tracking-wider disabled:opacity-50 transition-colors text-left flex justify-between"
               >
-                <span>(b1) OWL-ViT Detector (WASM q8)</span>
-                <span>{activeTest === 'OWL_VIT_Q8' ? 'Running...' : 'Run'}</span>
+                <span>(b1) DETR ResNet-50 Detector (WASM q8)</span>
+                <span>{activeTest === 'DETR_Q8' ? 'Running...' : 'Run'}</span>
               </button>
 
               <button
-                id="smoke-owlvit-fp32-btn"
-                onClick={() => runTest('OWL_VIT_FP32')}
+                id="smoke-detr-fp32-btn"
+                onClick={() => runTest('DETR_FP32')}
                 disabled={!!activeTest}
                 className="w-full py-2 px-3 bg-bg-elevated hover:bg-border-default border border-border-subtle text-text-primary text-xs uppercase tracking-wider disabled:opacity-50 transition-colors text-left flex justify-between"
               >
-                <span>(b2) OWL-ViT Detector (WASM fp32)</span>
-                <span>{activeTest === 'OWL_VIT_FP32' ? 'Running...' : 'Run'}</span>
+                <span>(b2) DETR ResNet-50 Detector (WASM fp32)</span>
+                <span>{activeTest === 'DETR_FP32' ? 'Running...' : 'Run'}</span>
               </button>
 
               <button
@@ -308,29 +308,20 @@ export default function CvSmokePage() {
                 disabled={!!activeTest}
                 className="w-full py-2 px-3 bg-bg-elevated hover:bg-border-default border border-border-subtle text-text-primary text-xs uppercase tracking-wider disabled:opacity-50 transition-colors text-left flex justify-between"
               >
-                <span>(b3) DETR ResNet-50 Fallback (WASM q8)</span>
+                <span>(b3) DETR ResNet-50 Fallback (WASM q8 alias)</span>
                 <span>{activeTest === 'DETR_COCO' ? 'Running...' : 'Run'}</span>
               </button>
 
               <div className="text-[10px] text-text-muted uppercase tracking-wider font-bold pt-2">
-                2. Full Chain (Detector + CLIP Crop Classifier)
+                2. Full Chain (DETR + CLIP Crop Classifier)
               </div>
-              <button
-                id="smoke-full-chain-owl-btn"
-                onClick={() => runFullChainTest('Xenova/owlvit-base-patch32')}
-                disabled={!!activeTest}
-                className="w-full py-2 px-3 bg-bg-elevated hover:bg-border-default border border-border-subtle text-text-primary text-xs uppercase tracking-wider disabled:opacity-50 transition-colors text-left flex justify-between"
-              >
-                <span>(c1) Full Chain: OWL-ViT + CLIP</span>
-                <span>{activeTest?.startsWith('FULL_CHAIN_OWL') ? 'Running...' : 'Run'}</span>
-              </button>
               <button
                 id="smoke-full-chain-detr-btn"
                 onClick={() => runFullChainTest('Xenova/detr-resnet-50')}
                 disabled={!!activeTest}
                 className="w-full py-2 px-3 bg-bg-elevated hover:bg-border-default border border-border-subtle text-text-primary text-xs uppercase tracking-wider disabled:opacity-50 transition-colors text-left flex justify-between"
               >
-                <span>(c2) Full Chain: DETR Fallback + CLIP</span>
+                <span>(c) Full Chain: DETR + CLIP</span>
                 <span>{activeTest?.startsWith('FULL_CHAIN_DETR') ? 'Running...' : 'Run'}</span>
               </button>
             </div>

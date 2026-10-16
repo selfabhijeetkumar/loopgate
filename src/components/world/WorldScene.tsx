@@ -15,8 +15,8 @@
 
 import React, { useRef, useMemo, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
+import type { WorldOverlayHandle } from './WorldOverlay';
 import type { Item, RouteId } from '@/domain/types';
 import type { ItemDecision } from '@/engine';
 import { FacilityLine } from '../twin/FacilityLine';
@@ -48,6 +48,7 @@ export interface WorldSceneProps {
   chapter: number; // 0-5
   interactionEnabled: boolean;
   reducedMotion: boolean;
+  overlayRef?: React.RefObject<WorldOverlayHandle | null>;
 }
 
 export interface WorldSceneHandle {
@@ -86,9 +87,9 @@ export const CHAPTER_CAMERA_STATES: SceneCameraState[] = [
   },
   // 4: RUN IT YOURSELF — interactive orbit view of complete line (all stations visible)
   {
-    position: new THREE.Vector3(-0.5, 13.0, 26.0),
+    position: new THREE.Vector3(-0.5, 14.5, 32.0),
     target: new THREE.Vector3(0.0, 0.5, 0.0),
-    fov: 54,
+    fov: 52,
   },
   // 5: STREAMS & ASSUMPTIONS — pulled-back elevated oblique, darker world
   {
@@ -309,56 +310,6 @@ function AnimatedItem({
           isFloorTriggered={isHazard}
         />
       </group>
-
-      {/* Chapter 1: Scan bracket box overlay */}
-      {kinematics.isAtScanner && (
-        <Html distanceFactor={6} position={[0, 0.55, 0]} style={{ pointerEvents: 'none' }}>
-          <div
-            style={{
-              border: '1px solid #f59e0b',
-              padding: '2px 4px',
-              fontSize: 8,
-              fontFamily: 'monospace',
-              color: '#fbbf24',
-              background: 'rgba(8,10,14,0.85)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            [{item.id}] SCAN [SIMULATED]
-          </div>
-        </Html>
-      )}
-
-      {/* Chapter 4: Hover / Selection Telemetry Tooltip */}
-      {decision && showLabel && (isSelected || isHovered) && (
-        <Html distanceFactor={7} position={[0, 0.75, 0]} style={{ pointerEvents: 'none' }}>
-          <div
-            style={{
-              background: 'rgba(8,10,14,0.94)',
-              border: `1px solid ${isHazard ? '#f59e0b' : '#475569'}`,
-              padding: '5px 8px',
-              fontSize: 9,
-              fontFamily: 'monospace',
-              color: '#e2e8f0',
-              whiteSpace: 'nowrap',
-              minWidth: 150,
-            }}
-          >
-            <div style={{ color: '#fbbf24', fontWeight: 'bold', marginBottom: 2 }}>{item.id}</div>
-            <div>
-              p(haz):{' '}
-              <span style={{ color: isHazard ? '#f87171' : '#34d399', fontWeight: 'bold' }}>
-                {(item.hazardProbability * 100).toFixed(1)}%
-              </span>
-            </div>
-            <div>gate: {decision.gateScore.toFixed(3)}</div>
-            <div>
-              route: <span style={{ color: '#fbbf24' }}>{decision.route}</span>
-            </div>
-            <div style={{ color: '#94a3b8', fontSize: 8 }}>[SIMULATED]</div>
-          </div>
-        </Html>
-      )}
     </group>
   );
 }
@@ -589,10 +540,9 @@ function LightSweep({ reducedMotion }: { reducedMotion: boolean }) {
 // Scroll-Revealed Floating HUD Readouts with Leader Lines & Provenance Chips
 // ---------------------------------------------------------------------------
 
-function Chapter0HeroReadout({ items }: { items: Item[] }) {
+function Chapter0HeroReadout() {
   return (
     <group position={[-3.5, 2.2, 1.2]}>
-      {/* 3D leader line from HUD card down to belt surface */}
       <line>
         <bufferGeometry
           attach="geometry"
@@ -602,74 +552,13 @@ function Chapter0HeroReadout({ items }: { items: Item[] }) {
         />
         <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
       </line>
-      <Html distanceFactor={7.5} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
-        <div
-          style={{
-            background: 'rgba(8,10,14,0.96)',
-            border: '1px solid #334155',
-            borderLeft: '3px solid #f59e0b',
-            padding: '8px 12px',
-            fontFamily: 'monospace',
-            fontSize: 9,
-            color: '#e2e8f0',
-            width: 230,
-            maxWidth: 'calc(100vw - 32px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
-          }}
-        >
-          <div
-            style={{
-              color: '#fbbf24',
-              fontWeight: 'bold',
-              borderBottom: '1px solid #334155',
-              paddingBottom: 4,
-              marginBottom: 6,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span>INGEST // BELT ACTIVE</span>
-            <span
-              style={{
-                background: '#0284c7',
-                color: '#f0f9ff',
-                fontSize: 8,
-                padding: '1px 5px',
-                borderRadius: 2,
-                fontWeight: 700,
-              }}
-            >
-              [CALCULATED]
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 3, fontSize: 8.5 }}>
-            <div>
-              MANIFEST ITEMS:{' '}
-              <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{items.length} TRACKED</span>
-            </div>
-            <div>
-              EA-01 SAFETY FLOOR:{' '}
-              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>&ge; 0.30 P(HAZ) DIVERT</span>
-            </div>
-            <div>
-              LINE VELOCITY: <span style={{ color: '#10b981' }}>1.2 m/s CONSTANT</span>
-            </div>
-          </div>
-        </div>
-      </Html>
     </group>
   );
 }
 
-function Chapter1ScanReadout({ items, isScanning }: { items: Item[]; isScanning: boolean }) {
-  const avgConfidence =
-    items.reduce((acc, it) => acc + (it.overallConfidence ?? 0.85), 0) / Math.max(1, items.length);
-  const meanConfidence = Math.round(avgConfidence * 100);
-
+function Chapter1ScanReadout() {
   return (
     <group position={[-4.2, 2.7, 0.4]}>
-      {/* 3D leader line down to scanner arch */}
       <line>
         <bufferGeometry
           attach="geometry"
@@ -679,88 +568,13 @@ function Chapter1ScanReadout({ items, isScanning }: { items: Item[]; isScanning:
         />
         <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
       </line>
-      <Html distanceFactor={7.0} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
-        <div
-          style={{
-            background: 'rgba(8,10,14,0.96)',
-            border: '1px solid #334155',
-            borderLeft: '3px solid #f59e0b',
-            padding: '8px 12px',
-            fontFamily: 'monospace',
-            fontSize: 9,
-            color: '#e2e8f0',
-            width: 230,
-            maxWidth: 'calc(100vw - 32px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
-          }}
-        >
-          <div
-            style={{
-              color: '#fbbf24',
-              fontWeight: 'bold',
-              borderBottom: '1px solid #334155',
-              paddingBottom: 4,
-              marginBottom: 6,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span>STAGE 01 // SCAN PROPOSALS</span>
-            <span
-              style={{
-                background: '#475569',
-                color: '#f8fafc',
-                fontSize: 8,
-                padding: '1px 5px',
-                borderRadius: 2,
-                fontWeight: 700,
-              }}
-            >
-              [SIMULATED]
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 3, fontSize: 8.5 }}>
-            <div>
-              SURFACE SCANNER:{' '}
-              <span style={{ color: isScanning ? '#f59e0b' : '#10b981', fontWeight: 'bold' }}>
-                {isScanning ? 'SWEEPING (AMBER)' : 'STANDBY READY'}
-              </span>
-            </div>
-            <div>
-              ANALYZED PROPOSALS:{' '}
-              <span style={{ color: '#38bdf8' }}>{items.length} STREAM OBJECTS</span>
-            </div>
-            <div>
-              MEAN CONFIDENCE:{' '}
-              <span style={{ color: '#10b981', fontWeight: 'bold' }}>{meanConfidence}%</span>
-            </div>
-          </div>
-        </div>
-      </Html>
     </group>
   );
 }
 
-function Chapter2GateReadout({
-  items,
-  decisions,
-  diverterAngle,
-}: {
-  items: Item[];
-  decisions: ItemDecision[];
-  diverterAngle: number;
-}) {
-  const item08 = items.find((i) => i.id === 'item-08');
-  const item08Dec = decisions.find((d) => d.itemId === 'item-08');
-
-  // Ambiguous item: item-04 (Coated Hot Beverage Paper Cup)
-  const itemAmbiguous = items.find((i) => i.id === 'item-04');
-  const itemAmbiguousDec = decisions.find((d) => d.itemId === 'item-04');
-
+function Chapter2GateReadout() {
   return (
     <group position={[0.2, 2.2, 0.4]}>
-      {/* 3D leader line down to diverter pivot */}
       <line>
         <bufferGeometry
           attach="geometry"
@@ -770,120 +584,13 @@ function Chapter2GateReadout({
         />
         <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
       </line>
-      <Html distanceFactor={6.5} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
-        <div
-          style={{
-            background: 'rgba(8,10,14,0.96)',
-            border: '1px solid #f59e0b',
-            borderLeft: '3px solid #f59e0b',
-            padding: '8px 12px',
-            fontFamily: 'monospace',
-            fontSize: 9,
-            color: '#e2e8f0',
-            width: 250,
-            maxWidth: 'calc(100vw - 32px)',
-            transform: 'translateX(clamp(-90px, 0px, 0px))',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
-          }}
-        >
-          <div
-            style={{
-              color: '#fbbf24',
-              fontWeight: 'bold',
-              borderBottom: '1px solid #334155',
-              paddingBottom: 4,
-              marginBottom: 6,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span>STAGE 02 // GATE DECISION</span>
-            <span
-              style={{
-                background: '#0284c7',
-                color: '#f0f9ff',
-                fontSize: 8,
-                padding: '1px 5px',
-                borderRadius: 2,
-                fontWeight: 700,
-              }}
-            >
-              [CALCULATED]
-            </span>
-          </div>
-
-          <div style={{ marginBottom: 4, fontSize: 8, color: '#94a3b8' }}>
-            DIVERTER ARM:{' '}
-            <span
-              style={{
-                color: diverterAngle > 0.3 ? '#ef4444' : '#10b981',
-                fontWeight: 'bold',
-              }}
-            >
-              {diverterAngle > 0.3 ? 'EXTENDED (DIVERT)' : 'RETRACTED'}
-            </span>
-          </div>
-
-          {/* Item 08 readout */}
-          {item08 && item08Dec && (
-            <div style={{ marginBottom: 6, borderBottom: '1px solid #1e293b', paddingBottom: 4 }}>
-              <div style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                ITEM-08: {item08.name.slice(0, 22)}...
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, fontSize: 8 }}>
-                <div>
-                  p(haz):{' '}
-                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                    {(item08.hazardProbability * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div>gateScore: {item08Dec.gateScore.toFixed(3)}</div>
-                <div>
-                  route: <span style={{ color: '#fbbf24' }}>{item08Dec.route}</span>
-                </div>
-                <div>
-                  floorTrigger: <span style={{ color: '#ef4444' }}>TRUE (EA-01)</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Ambiguous item readout */}
-          {itemAmbiguous && itemAmbiguousDec && (
-            <div>
-              <div style={{ color: '#93c5fd', fontWeight: 'bold' }}>
-                ITEM-04: {itemAmbiguous.name.slice(0, 22)}...
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, fontSize: 8 }}>
-                <div>p(haz): {(itemAmbiguous.hazardProbability * 100).toFixed(1)}%</div>
-                <div>gateScore: {itemAmbiguousDec.gateScore.toFixed(3)}</div>
-                <div>
-                  route: <span style={{ color: '#fbbf24' }}>{itemAmbiguousDec.route}</span>
-                </div>
-                <div>
-                  uncertainty: <span style={{ color: '#38bdf8' }}>HIGH (DISPUTED)</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </Html>
     </group>
   );
 }
 
-function Chapter3RouteReadout({ decisions }: { decisions: ItemDecision[] }) {
-  const hazardHoldCount = decisions.filter((d) => d.route === 'hazard_hold').length;
-  const inspectionCount = decisions.filter((d) => d.route === 'inspection_line').length;
-  const recyclableBayCount = decisions.filter((d) => d.route === 'recyclable_bay').length;
-  const compactorCount = decisions.filter(
-    (d) => d.route === 'recyclable_bay' || d.route === 'biodegradable_bay'
-  ).length;
-
+function Chapter3RouteReadout() {
   return (
     <group position={[4.0, 2.6, 0.6]}>
-      {/* 3D leader line down to compactor chute */}
       <line>
         <bufferGeometry
           attach="geometry"
@@ -893,99 +600,13 @@ function Chapter3RouteReadout({ decisions }: { decisions: ItemDecision[] }) {
         />
         <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
       </line>
-      <Html distanceFactor={7.0} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
-        <div
-          style={{
-            background: 'rgba(8,10,14,0.96)',
-            border: '1px solid #334155',
-            borderLeft: '3px solid #f59e0b',
-            padding: '8px 12px',
-            fontFamily: 'monospace',
-            fontSize: 9,
-            color: '#e2e8f0',
-            width: 240,
-            maxWidth: 'calc(100vw - 32px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
-          }}
-        >
-          <div
-            style={{
-              color: '#fbbf24',
-              fontWeight: 'bold',
-              borderBottom: '1px solid #334155',
-              paddingBottom: 4,
-              marginBottom: 6,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span>STAGE 03 // ROUTE AUDIT</span>
-            <span
-              style={{
-                background: '#0284c7',
-                color: '#f0f9ff',
-                fontSize: 8,
-                padding: '1px 5px',
-                borderRadius: 2,
-                fontWeight: 700,
-              }}
-            >
-              [CALCULATED]
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, fontSize: 8 }}>
-            <div>
-              HAZARD HOLD:{' '}
-              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{hazardHoldCount}</span>
-            </div>
-            <div>
-              INSPECTION:{' '}
-              <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{inspectionCount}</span>
-            </div>
-            <div>
-              RECYCLABLE:{' '}
-              <span style={{ color: '#10b981', fontWeight: 'bold' }}>{recyclableBayCount}</span>
-            </div>
-            <div>
-              COMPACTOR:{' '}
-              <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{compactorCount}</span>
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 7.5,
-              color: '#94a3b8',
-              borderTop: '1px solid #1e293b',
-              paddingTop: 4,
-            }}
-          >
-            In this simulated scenario: zero battery thermal events reach the compactor stream.
-          </div>
-        </div>
-      </Html>
     </group>
   );
 }
 
-function Chapter5StreamsReadout({
-  items,
-  decisions,
-}: {
-  items: Item[];
-  decisions: ItemDecision[];
-}) {
-  const recyclableCount = items.filter((i) => i.primaryClass === 'recyclable').length;
-  const reusableCount = items.filter((i) => i.primaryClass === 'reusable').length;
-  const compostCount = items.filter((i) => i.primaryClass === 'biodegradable').length;
-  const hazardCount = decisions.filter((d) => d.route === 'hazard_hold').length;
-  const total = Math.max(1, items.length);
-  const diversionPct = (((items.length - hazardCount) / total) * 100).toFixed(1);
-
+function Chapter5StreamsReadout() {
   return (
     <group position={[0.0, 3.8, 1.0]}>
-      {/* 3D leader line down to facility center line */}
       <line>
         <bufferGeometry
           attach="geometry"
@@ -995,78 +616,6 @@ function Chapter5StreamsReadout({
         />
         <lineBasicMaterial attach="material" color="#f59e0b" opacity={0.4} transparent />
       </line>
-      <Html distanceFactor={8.0} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
-        <div
-          style={{
-            background: 'rgba(8,10,14,0.96)',
-            border: '1px solid #334155',
-            borderLeft: '3px solid #f59e0b',
-            padding: '8px 12px',
-            fontFamily: 'monospace',
-            fontSize: 9,
-            color: '#e2e8f0',
-            width: 250,
-            maxWidth: 'calc(100vw - 32px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
-          }}
-        >
-          <div
-            style={{
-              color: '#fbbf24',
-              fontWeight: 'bold',
-              borderBottom: '1px solid #334155',
-              paddingBottom: 4,
-              marginBottom: 6,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span>STAGE 05 // STREAM TOTALS</span>
-            <span
-              style={{
-                background: '#0284c7',
-                color: '#f0f9ff',
-                fontSize: 8,
-                padding: '1px 5px',
-                borderRadius: 2,
-                fontWeight: 700,
-              }}
-            >
-              [CALCULATED]
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, fontSize: 8 }}>
-            <div>
-              RECYCLABLE:{' '}
-              <span style={{ color: '#10b981', fontWeight: 'bold' }}>{recyclableCount}</span>
-            </div>
-            <div>
-              REUSABLE:{' '}
-              <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{reusableCount}</span>
-            </div>
-            <div>
-              COMPOST:{' '}
-              <span style={{ color: '#a3e635', fontWeight: 'bold' }}>{compostCount}</span>
-            </div>
-            <div>
-              HAZARD ISOLATED:{' '}
-              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{hazardCount}</span>
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 8,
-              color: '#f59e0b',
-              borderTop: '1px solid #1e293b',
-              paddingTop: 4,
-            }}
-          >
-            TOTAL STREAM RETENTION: {diversionPct}%
-          </div>
-        </div>
-      </Html>
     </group>
   );
 }
@@ -1264,6 +813,7 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
     chapter,
     interactionEnabled,
     reducedMotion,
+    overlayRef,
   },
   ref
 ) {
@@ -1275,6 +825,7 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
   const parallaxOffset = useRef(new THREE.Vector2(0, 0));
   const pointerNDC = useRef(new THREE.Vector2(0, 0));
   const pointerWorld = useRef(new THREE.Vector3(0, 0, 0));
+  const projVec = useMemo(() => new THREE.Vector3(), []);
 
   useImperativeHandle(ref, () => ({
     setCameraState(state: SceneCameraState) {
@@ -1345,6 +896,66 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
 
   // Fade world down in final chapter
   const worldOpacity = chapter >= 5 ? 0.45 : 1.0;
+
+  // Project 3D station tags and active item HUDs into DOM overlay
+  useFrame(({ camera, size }) => {
+    if (!overlayRef?.current) return;
+
+    // Station badges
+    const stationPositions = [
+      { idx: 0, pos: [-3.5, 2.2, 1.2], ch: 0 },
+      { idx: 1, pos: [-4.2, 2.7, 0.4], ch: 1 },
+      { idx: 2, pos: [0.2, 2.2, 0.4], ch: 2 },
+      { idx: 3, pos: [4.0, 2.6, 0.6], ch: 3 },
+      { idx: 4, pos: [0.0, 3.8, 1.0], ch: 5 },
+    ];
+
+    stationPositions.forEach(({ idx, pos, ch }) => {
+      projVec.set(pos[0], pos[1], pos[2]).project(camera);
+      const isBehind = projVec.z > 1.0;
+      const x = (projVec.x * 0.5 + 0.5) * size.width;
+      const y = (-(projVec.y * 0.5) + 0.5) * size.height;
+      const opacity = chapter === ch ? 1.0 : 0.0;
+      overlayRef.current?.updateStation(idx, x, y, opacity, isBehind);
+    });
+
+    // Scanner item bracket
+    const scanningItem = itemKinematicsList.find((ik) => ik.kinematics.isAtScanner);
+    if (scanningItem && (chapter === 1 || chapter === 4)) {
+      const [kx, ky, kz] = scanningItem.kinematics.position;
+      projVec.set(kx, ky + 0.55, kz).project(camera);
+      const isBehind = projVec.z > 1.0;
+      const x = (projVec.x * 0.5 + 0.5) * size.width;
+      const y = (-(projVec.y * 0.5) + 0.5) * size.height;
+      overlayRef.current.updateScanBracket(x, y, 1.0, isBehind, scanningItem.item.id);
+    } else {
+      overlayRef.current.updateScanBracket(0, 0, 0, true);
+    }
+
+    // Hovered or selected item telemetry
+    const targetItemId = hoveredItemId || selectedItemId;
+    const activeItem = targetItemId
+      ? itemKinematicsList.find((ik) => ik.item.id === targetItemId)
+      : null;
+
+    if (activeItem && chapter === 4 && interactionEnabled) {
+      const [ax, ay, az] = activeItem.kinematics.position;
+      projVec.set(ax, ay + 0.75, az).project(camera);
+      const isBehind = projVec.z > 1.0;
+      const x = (projVec.x * 0.5 + 0.5) * size.width;
+      const y = (-(projVec.y * 0.5) + 0.5) * size.height;
+      overlayRef.current.updateItemTelemetry(x, y, 1.0, isBehind, {
+        id: activeItem.item.id,
+        name: activeItem.item.name,
+        hazardProbability: activeItem.item.hazardProbability,
+        gateScore: activeItem.decision?.gateScore ?? 0,
+        route: activeItem.decision?.route ?? 'unknown',
+        isHazard: activeItem.item.hazardProbability >= 0.30,
+      });
+    } else {
+      overlayRef.current.updateItemTelemetry(0, 0, 0, true);
+    }
+  });
 
   return (
     <>
@@ -1426,18 +1037,12 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
         {/* Hero floating hazards in Chapter 0 */}
         {chapter === 0 && <HeroFloatingHazards reducedMotion={reducedMotion} />}
 
-        {/* Scroll-revealed floating HUD data tags with leader lines & provenance chips */}
-        {chapter === 0 && <Chapter0HeroReadout items={items} />}
-        {chapter === 1 && <Chapter1ScanReadout items={items} isScanning={isAnyScanning} />}
-        {chapter === 2 && (
-          <Chapter2GateReadout
-            items={items}
-            decisions={decisions}
-            diverterAngle={diverterAngle}
-          />
-        )}
-        {chapter === 3 && <Chapter3RouteReadout decisions={decisions} />}
-        {chapter === 5 && <Chapter5StreamsReadout items={items} decisions={decisions} />}
+        {/* Scroll-revealed 3D leader lines */}
+        {chapter === 0 && <Chapter0HeroReadout />}
+        {chapter === 1 && <Chapter1ScanReadout />}
+        {chapter === 2 && <Chapter2GateReadout />}
+        {chapter === 3 && <Chapter3RouteReadout />}
+        {chapter === 5 && <Chapter5StreamsReadout />}
 
         {/* Ambient belt animation */}
         <AmbientBeltAnimation reducedMotion={reducedMotion} />

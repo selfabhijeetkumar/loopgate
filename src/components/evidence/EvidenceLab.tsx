@@ -516,6 +516,14 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
             {isDrawMode ? 'Cancel box' : 'Add box by hand'}
           </button>
         </div>
+
+        {/* Generic Detector Plain UI Note */}
+        <div className="text-[11px] font-mono text-text-muted bg-[#080b0f] border border-border-subtle px-3 py-1.5 rounded-[2px] flex items-center gap-2">
+          <span className="w-1.5 h-1.5 bg-amber-500 rounded-none flex-shrink-0" />
+          <span>
+            Generic detector: finds common objects only (for example phone, bottle, remote). Items it does not know, such as power banks, need a hand-drawn box.
+          </span>
+        </div>
       </div>
 
       {/* ------------------------------------------------------------------- */}

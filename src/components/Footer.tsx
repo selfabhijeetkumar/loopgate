@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { ProvenanceChip } from './ProvenanceChip';
 
 export function Footer() {
@@ -29,7 +30,24 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] text-text-muted">
+        {/* Navigation links row */}
+        <div className="pt-4 pb-4 border-b border-border-subtle/50 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-text-muted">
+          <Link href="/about" className="hover:text-text-primary transition-colors">About</Link>
+          <Link href="/faq" className="hover:text-text-primary transition-colors">FAQ</Link>
+          <Link href="/contact" className="hover:text-text-primary transition-colors">Contact</Link>
+          <Link href="/privacy" className="hover:text-text-primary transition-colors">Privacy</Link>
+          <Link href="/terms" className="hover:text-text-primary transition-colors">Terms</Link>
+          <a
+            href="https://github.com/selfabhijeetkumar/loopgate"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-text-primary transition-colors"
+          >
+            GitHub
+          </a>
+        </div>
+
+        <div className="pt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] text-text-muted">
           <div>
             &copy; {currentYear} Loopgate Project. Built for DSU Code Clash 2.0.
           </div>

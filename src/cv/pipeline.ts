@@ -47,7 +47,7 @@ export class ComputerVisionPipeline {
   private lastError: string | null = null;
   private progressListeners = new Set<ProgressListener>();
   private activeDevice: 'webgpu' | 'wasm' = 'wasm';
-  private activeModel = 'Xenova/owlvit-base-patch32';
+  private activeModel = 'Xenova/detr-resnet-50';
   private activeClip = 'Xenova/clip-vit-base-patch32';
   private preferredDtype: 'fp32' | 'q8' = 'q8';
   private hasAttemptedWebGpu = false;
@@ -90,7 +90,7 @@ export class ComputerVisionPipeline {
     };
   }
 
-  public setPreferredDetector(modelName: 'Xenova/owlvit-base-patch32' | 'Xenova/detr-resnet-50') {
+  public setPreferredDetector(modelName: 'Xenova/detr-resnet-50') {
     if (this.activeModel !== modelName) {
       this.activeModel = modelName;
       this.terminateWorker();
@@ -282,7 +282,7 @@ export class ComputerVisionPipeline {
    * Run isolated smoke tests in /dev/cv-smoke
    */
   public async runIsolatedSmokeTest(
-    testType: 'CLIP' | 'OWL_VIT_Q8' | 'OWL_VIT_FP32' | 'DETR_COCO',
+    testType: 'CLIP' | 'DETR_Q8' | 'DETR_FP32' | 'DETR_COCO',
     fileOrDataUrl: File | string
   ): Promise<SmokeTestResult> {
     const { buffer, width, height } = await this.prepareImage(fileOrDataUrl);
@@ -323,11 +323,11 @@ export class ComputerVisionPipeline {
           },
           [buffer]
         );
-      } else if (testType === 'OWL_VIT_Q8') {
+      } else if (testType === 'DETR_Q8') {
         smokeWorker.postMessage(
           {
             type: 'SMOKE_DETECTOR',
-            modelName: 'Xenova/owlvit-base-patch32',
+            modelName: 'Xenova/detr-resnet-50',
             dtype: 'q8',
             device: 'wasm',
             imageBuffer: buffer,
@@ -336,11 +336,11 @@ export class ComputerVisionPipeline {
           },
           [buffer]
         );
-      } else if (testType === 'OWL_VIT_FP32') {
+      } else if (testType === 'DETR_FP32') {
         smokeWorker.postMessage(
           {
             type: 'SMOKE_DETECTOR',
-            modelName: 'Xenova/owlvit-base-patch32',
+            modelName: 'Xenova/detr-resnet-50',
             dtype: 'fp32',
             device: 'wasm',
             imageBuffer: buffer,

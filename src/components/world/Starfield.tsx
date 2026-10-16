@@ -2,25 +2,26 @@
 
 /**
  * src/components/world/Starfield.tsx
- * Deep-space backdrop behind the Loopgate facility line.
+ * Deep-space celestial backdrop behind the Loopgate facility line.
  *
- * SPECIFICATION (Phase 4D Step 1):
- * 1. ONE Points object with custom GLSL shader:
- *    - 3 depth layers with parallax.
- *    - Slow twinkle (per-star phase).
- *    - Brighter stars have subtle cross-flares drawn as thin lines (no glow sprites, no bloom).
- *    - Stars are white or cool grey only (#f8fafc, #e2e8f0, #94a3b8).
- *      AMBER IS STRICTLY RESERVED FOR HAZARD.
- *    - Faint horizon haze / space dust using plain gradients (no neon, no purple).
- *    - Seeded deterministic PRNG (no Math.random at render).
- * 2. Quality Tiers:
- *    - HIGH: 3200 stars, 20 thin cross-flare lines.
- *    - MEDIUM: 1200 stars, 0 cross-flares.
- *    - LOW: Static starfield drawn once on small canvas, no animation.
- *    - prefers-reduced-motion: frozen twinkle, no parallax.
+ * SPECIFICATION (Phase 6+7 Step 0.6):
+ * 1. Sky-dome behaviour: Starfield group follows camera.position every frame
+ *    (inside useFrame, no React state), keeping stars at infinity across all 6 chapters.
+ * 2. Stars lie on a large spherical shell (radius 200, well inside camera far plane).
+ * 3. Material: fog: false, depthWrite: false, depthTest: false, renderOrder: -100,
+ *    frustumCulled: false, no multiplication by chapter fade.
+ * 4. Realistic magnitude distribution:
+ *    - HIGH: 8000 stars, 32 thin cross-flare lines
+ *    - MEDIUM: 4000 stars, 0 cross-flares
+ *    - LOW: 1500 stars (static backdrop)
+ *    - ~70% faint, ~25% medium, ~5% bright.
+ * 5. Soft galactic diagonal density band (cool whites/blues, NEVER purple, NEVER amber).
+ * 6. Pixel-scale crisp rendering with dpr scaling (1.0px min, 3.0px max).
+ * 7. Rotation-based parallax (pointer + scroll) on group, twinkle with per-star phase.
+ * 8. prefers-reduced-motion: frozen twinkle, no parallax.
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { QualityTier } from './qualityTier';
@@ -42,7 +43,6 @@ export interface StarPoint {
   x: number;
   y: number;
   z: number;
-  layer: number; // 1: far, 2: mid, 3: near
   size: number;
   phase: number;
   brightness: number;
@@ -54,38 +54,76 @@ export function generateSeededStarfield(count: number, flareCount = 0): {
   stars: StarPoint[];
   crossFlareSegments: number[];
 } {
-  const prng = createSeededRandom(88192);
+  const prng = createSeededRandom(918273);
   const stars: StarPoint[] = [];
   const crossFlareSegments: number[] = [];
 
   // Star palette: strictly cool whites and slates (NEVER amber, NEVER purple)
-  const coolWhite: [number, number, number] = [0.97, 0.98, 1.0];
-  const coolSlate: [number, number, number] = [0.82, 0.86, 0.92];
-  const dimGrey: [number, number, number] = [0.60, 0.65, 0.72];
+  const coolWhite: [number, number, number] = [0.96, 0.98, 1.0];
+  const paleBlue: [number, number, number] = [0.82, 0.88, 0.98];
+  const coolGrey: [number, number, number] = [0.65, 0.70, 0.78];
+  const faintSlate: [number, number, number] = [0.45, 0.50, 0.58];
 
-  for (let i = 0; i < count; i++) {
-    // Distribute across wide dome behind facility
-    // X in [-60, 60], Y in [0, 48], Z in [-55, -25]
-    const x = (prng() - 0.5) * 120;
-    const y = prng() * 48;
-    const z = -25 - prng() * 30;
+  const R = 200.0; // Spherical dome shell radius
 
-    // 3 depth layers
-    const layer = prng() < 0.5 ? 1 : prng() < 0.82 ? 2 : 3;
-    const baseSize = layer === 3 ? 1.8 + prng() * 1.2 : layer === 2 ? 1.2 + prng() * 0.8 : 0.8 + prng() * 0.5;
+  let i = 0;
+  while (stars.length < count && i < count * 4) {
+    i++;
+    // Azimuth phi in [0, 2pi), Elevation theta in [-0.05, pi * 0.52] (from slightly below horizon to zenith)
+    const phi = prng() * Math.PI * 2;
+    const u = prng();
+    // Elevation biased towards upper dome and horizon band
+    const theta = Math.asin(u * 0.95);
+
+    // Diagonal galactic band rejection sampling for soft density boost along diagonal plane
+    // Band normal approximately: (0.6, 0.3, 0.7)
+    const testX = Math.cos(theta) * Math.sin(phi);
+    const testY = Math.sin(theta);
+    const testZ = Math.cos(theta) * Math.cos(phi);
+    const bandDist = Math.abs(testX * 0.6 + testY * 0.3 - testZ * 0.7);
+
+    // If inside galactic band, higher density
+    const isBand = bandDist < 0.28;
+    if (!isBand && prng() > 0.65) {
+      continue; // Filter out to create natural celestial clustering
+    }
+
+    const x = R * testX;
+    const y = R * testY;
+    const z = R * testZ;
+
+    // Realistic magnitude distribution
+    // 70% faint, 25% medium, 5% bright
+    const magRand = prng();
+    let size: number;
+    let brightness: number;
+    let color: [number, number, number];
+
+    if (magRand < 0.70) {
+      // Faint background star
+      size = 1.0 + prng() * 0.3;
+      brightness = 0.35 + prng() * 0.30;
+      color = prng() < 0.6 ? coolGrey : faintSlate;
+    } else if (magRand < 0.95) {
+      // Medium star
+      size = 1.4 + prng() * 0.6;
+      brightness = 0.65 + prng() * 0.25;
+      color = prng() < 0.7 ? paleBlue : coolWhite;
+    } else {
+      // Bright anchor star
+      size = 2.2 + prng() * 0.8;
+      brightness = 0.88 + prng() * 0.12;
+      color = coolWhite;
+    }
+
     const phase = prng() * Math.PI * 2;
-    const brightness = 0.55 + prng() * 0.45;
-
-    const colRand = prng();
-    const color = colRand < 0.6 ? coolWhite : colRand < 0.85 ? coolSlate : dimGrey;
-    const hasCrossFlare = i < flareCount && layer >= 2;
+    const hasCrossFlare = stars.length < flareCount && magRand >= 0.95;
 
     stars.push({
       x,
       y,
       z,
-      layer,
-      size: baseSize,
+      size,
       phase,
       brightness,
       color,
@@ -93,12 +131,12 @@ export function generateSeededStarfield(count: number, flareCount = 0): {
     });
 
     if (hasCrossFlare) {
-      // Build thin horizontal and vertical cross-flare line segments (+ shape)
-      const flareArm = 0.35 + prng() * 0.25;
-      // Horizontal segment
-      crossFlareSegments.push(x - flareArm, y, z, x + flareArm, y, z);
-      // Vertical segment
-      crossFlareSegments.push(x, y - flareArm, z, x, y + flareArm, z);
+      // Construct cross-flare lines along tangent plane to dome
+      const armLength = 0.65 + prng() * 0.35;
+      crossFlareSegments.push(
+        x - armLength, y, z, x + armLength, y, z,
+        x, y - armLength, z, x, y + armLength, z
+      );
     }
   }
 
@@ -106,7 +144,7 @@ export function generateSeededStarfield(count: number, flareCount = 0): {
 }
 
 // ---------------------------------------------------------------------------
-// 3D Starfield Component
+// 3D Starfield Sky Dome Component
 // ---------------------------------------------------------------------------
 
 interface StarfieldProps {
@@ -116,22 +154,27 @@ interface StarfieldProps {
   scrollProgress?: number;
 }
 
-export function Starfield({ tier, reducedMotion, parallaxOffset, scrollProgress = 0 }: StarfieldProps) {
+export function Starfield({
+  tier,
+  reducedMotion,
+  parallaxOffset,
+  scrollProgress = 0,
+}: StarfieldProps) {
+  const groupRef = useRef<THREE.Group>(null);
   const pointsMaterialRef = useRef<THREE.ShaderMaterial>(null);
   const flaresMaterialRef = useRef<THREE.LineBasicMaterial>(null);
 
-  const starCount = tier === 'HIGH' ? 3200 : tier === 'MEDIUM' ? 1200 : 0;
-  const flareCount = tier === 'HIGH' ? 24 : 0;
+  // Target counts per tier specification
+  const starCount = tier === 'HIGH' ? 8000 : tier === 'MEDIUM' ? 4000 : 1500;
+  const flareCount = tier === 'HIGH' ? 32 : 0;
 
   const { stars, crossFlareSegments } = useMemo(() => {
     return generateSeededStarfield(starCount, flareCount);
   }, [starCount, flareCount]);
 
-  // Build Points geometry attributes
   const { geometry, flareGeometry } = useMemo(() => {
     const geo = new THREE.BufferGeometry();
     const positions = new Float32Array(stars.length * 3);
-    const layers = new Float32Array(stars.length);
     const sizes = new Float32Array(stars.length);
     const phases = new Float32Array(stars.length);
     const brightnesses = new Float32Array(stars.length);
@@ -142,7 +185,6 @@ export function Starfield({ tier, reducedMotion, parallaxOffset, scrollProgress 
       positions[i * 3 + 1] = s.y;
       positions[i * 3 + 2] = s.z;
 
-      layers[i] = s.layer;
       sizes[i] = s.size;
       phases[i] = s.phase;
       brightnesses[i] = s.brightness;
@@ -153,13 +195,11 @@ export function Starfield({ tier, reducedMotion, parallaxOffset, scrollProgress 
     });
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('aLayer', new THREE.BufferAttribute(layers, 1));
     geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
     geo.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
     geo.setAttribute('aBrightness', new THREE.BufferAttribute(brightnesses, 1));
     geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
 
-    // Cross flare line geometry
     const fGeo = new THREE.BufferGeometry();
     if (crossFlareSegments.length > 0) {
       fGeo.setAttribute('position', new THREE.Float32BufferAttribute(crossFlareSegments, 3));
@@ -171,59 +211,57 @@ export function Starfield({ tier, reducedMotion, parallaxOffset, scrollProgress 
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uParallax: { value: new THREE.Vector2(0, 0) },
-      uScrollDepth: { value: 0 },
       uReducedMotion: { value: reducedMotion ? 1.0 : 0.0 },
+      uPixelRatio: { value: typeof window !== 'undefined' ? Math.min(2.0, window.devicePixelRatio || 1.0) : 1.0 },
     }),
     [reducedMotion]
   );
 
   useFrame((state) => {
+    // 1. Sky-Dome behavior: group follows camera position directly every frame
+    if (groupRef.current) {
+      groupRef.current.position.copy(state.camera.position);
+
+      // Subtle celestial rotation parallax (group rotation, not modifying individual points)
+      if (!reducedMotion) {
+        groupRef.current.rotation.y = parallaxOffset.current.x * 0.04 + scrollProgress * 0.08;
+        groupRef.current.rotation.x = -parallaxOffset.current.y * 0.02;
+      }
+    }
+
+    // 2. Twinkle animation
     if (pointsMaterialRef.current) {
       pointsMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-      pointsMaterialRef.current.uniforms.uParallax.value.set(
-        parallaxOffset.current.x * (reducedMotion ? 0 : 1),
-        parallaxOffset.current.y * (reducedMotion ? 0 : 1)
-      );
-      pointsMaterialRef.current.uniforms.uScrollDepth.value = scrollProgress;
       pointsMaterialRef.current.uniforms.uReducedMotion.value = reducedMotion ? 1.0 : 0.0;
     }
 
+    // 3. Flare pulse
     if (flaresMaterialRef.current && !reducedMotion) {
-      // Subtle pulse on cross-flares
-      const t = state.clock.elapsedTime * 1.2;
+      const t = state.clock.elapsedTime * 1.5;
       flaresMaterialRef.current.opacity = 0.55 + Math.sin(t) * 0.25;
     }
   });
 
-  if (tier === 'LOW') {
-    // In LOW tier, render static background plane only (zero animation points)
-    return <StaticHorizonBackdrop />;
-  }
-
   return (
-    <group position={[0, 0, 0]}>
-      {/* 1. Procedural Horizon Haze & Space Dust Backdrop */}
-      <StaticHorizonBackdrop />
-
-      {/* 2. Primary Instanced Star Points */}
-      <points geometry={geometry}>
+    <group ref={groupRef} renderOrder={-100}>
+      {/* Primary Instanced Celestial Points */}
+      <points geometry={geometry} frustumCulled={false} renderOrder={-100}>
         <shaderMaterial
           ref={pointsMaterialRef}
           uniforms={uniforms}
           transparent
+          fog={false}
+          depthTest={false}
           depthWrite={false}
           vertexShader={`
-            attribute float aLayer;
             attribute float aSize;
             attribute float aPhase;
             attribute float aBrightness;
             attribute vec3 aColor;
 
             uniform float uTime;
-            uniform vec2 uParallax;
-            uniform float uScrollDepth;
             uniform float uReducedMotion;
+            uniform float uPixelRatio;
 
             varying vec3 vColor;
             varying float vBrightness;
@@ -232,24 +270,15 @@ export function Starfield({ tier, reducedMotion, parallaxOffset, scrollProgress 
               vColor = aColor;
               vBrightness = aBrightness;
 
-              vec3 pos = position;
-
-              // 3-Layer Parallax to pointer and scroll depth
-              float layerFactor = aLayer * 0.8;
-              pos.x += uParallax.x * layerFactor * 8.0;
-              pos.y += uParallax.y * layerFactor * 4.0 + uScrollDepth * layerFactor * 2.0;
-
-              vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
-
               // Twinkle effect (frozen if reduced motion)
               float twinkle = 1.0;
               if (uReducedMotion < 0.5) {
-                twinkle = 0.72 + 0.28 * sin(uTime * 1.6 + aPhase);
+                twinkle = 0.72 + 0.28 * sin(uTime * 1.8 + aPhase);
               }
 
-              // Distance size attenuation
-              gl_PointSize = aSize * twinkle * (180.0 / -mvPos.z);
-              gl_Position = projectionMatrix * mvPos;
+              // Fixed pixel size scaled by devicePixelRatio
+              gl_PointSize = max(1.0, aSize * uPixelRatio * twinkle);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
           `}
           fragmentShader={`
@@ -257,26 +286,28 @@ export function Starfield({ tier, reducedMotion, parallaxOffset, scrollProgress 
             varying float vBrightness;
 
             void main() {
-              // Circular point discard with smooth edge
+              // Crisp circular star point with soft anti-aliased edge
               float dist = length(gl_PointCoord - vec2(0.5));
               if (dist > 0.5) discard;
 
-              float alpha = smoothstep(0.5, 0.12, dist) * vBrightness;
+              float alpha = smoothstep(0.5, 0.15, dist) * vBrightness;
               gl_FragColor = vec4(vColor, alpha);
             }
           `}
         />
       </points>
 
-      {/* 3. Subtle Cross-Flare Lines for Brightest Stars (no glow sprites, no bloom) */}
+      {/* Subtle Cross-Flare Lines for Brightest Stars */}
       {flareCount > 0 && crossFlareSegments.length > 0 && (
-        <lineSegments geometry={flareGeometry}>
+        <lineSegments geometry={flareGeometry} frustumCulled={false} renderOrder={-99}>
           <lineBasicMaterial
             ref={flaresMaterialRef}
-            color="#f1f5f9"
+            color="#f8fafc"
             transparent
-            opacity={0.65}
+            fog={false}
+            depthTest={false}
             depthWrite={false}
+            opacity={0.6}
           />
         </lineSegments>
       )}
@@ -285,48 +316,29 @@ export function Starfield({ tier, reducedMotion, parallaxOffset, scrollProgress 
 }
 
 // ---------------------------------------------------------------------------
-// Static Horizon Haze Gradient Backdrop
+// Static Insurance Layer Component (Canvas / CSS Backdrop)
 // ---------------------------------------------------------------------------
 
-function StaticHorizonBackdrop() {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  const uniforms = useMemo(
-    () => ({
-      uBottomColor: { value: new THREE.Color('#070a0d') }, // blends with facility floor
-      uMidHaze: { value: new THREE.Color('#0b1017') },     // deep industrial slate
-      uTopSpace: { value: new THREE.Color('#030508') },    // deep void black
-    }),
-    []
-  );
-
+export function StaticStarfieldInsurance() {
   return (
-    <mesh ref={meshRef} position={[0, 18, -50]}>
-      <planeGeometry args={[160, 80]} />
-      <shaderMaterial
-        uniforms={uniforms}
-        depthWrite={false}
-        vertexShader={`
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `}
-        fragmentShader={`
-          uniform vec3 uBottomColor;
-          uniform vec3 uMidHaze;
-          uniform vec3 uTopSpace;
-          varying vec2 vUv;
-
-          void main() {
-            // Smooth gradient: floor horizon -> subtle dust haze -> deep cosmic void
-            vec3 col = mix(uBottomColor, uMidHaze, smoothstep(0.0, 0.45, vUv.y));
-            col = mix(col, uTopSpace, smoothstep(0.45, 0.95, vUv.y));
-            gl_FragColor = vec4(col, 1.0);
-          }
-        `}
-      />
-    </mesh>
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        zIndex: -1,
+        background: `
+          radial-gradient(circle at 50% 20%, rgba(15, 23, 42, 0.8) 0%, rgba(7, 10, 13, 0.98) 75%),
+          radial-gradient(1.5px 1.5px at 15% 25%, #cbd5e1 50%, transparent 100%),
+          radial-gradient(1px 1px at 35% 15%, #94a3b8 50%, transparent 100%),
+          radial-gradient(2px 2px at 65% 18%, #f8fafc 50%, transparent 100%),
+          radial-gradient(1px 1px at 85% 30%, #94a3b8 50%, transparent 100%),
+          radial-gradient(1.5px 1.5px at 45% 45%, #cbd5e1 50%, transparent 100%),
+          radial-gradient(1px 1px at 75% 65%, #64748b 50%, transparent 100%),
+          radial-gradient(2px 2px at 25% 75%, #f8fafc 50%, transparent 100%),
+          radial-gradient(1px 1px at 90% 80%, #94a3b8 50%, transparent 100%)
+        `,
+        backgroundColor: '#06090d',
+      }}
+      aria-hidden="true"
+    />
   );
 }

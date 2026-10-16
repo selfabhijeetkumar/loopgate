@@ -16,6 +16,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useSimulation } from '@/components/twin/SimulationContext';
 import { WorldScene, CHAPTER_CAMERA_STATES, type WorldSceneHandle } from './WorldScene';
 import { WorldCursor } from './WorldCursor';
+import { WorldOverlay, type WorldOverlayHandle } from './WorldOverlay';
+import { StaticStarfieldInsurance } from './Starfield';
 import { TIER_CONFIGS } from './qualityTier';
 
 if (typeof window !== 'undefined') {
@@ -39,6 +41,7 @@ export function World() {
   } = useSimulation();
 
   const sceneRef = useRef<WorldSceneHandle>(null);
+  const overlayRef = useRef<WorldOverlayHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [isTabHidden, setIsTabHidden] = useState(false);
@@ -177,6 +180,9 @@ export function World() {
       }}
       aria-hidden="true"
     >
+      {/* Insurance layer: Static CSS / radial starfield behind WebGL canvas */}
+      <StaticStarfieldInsurance />
+
       {hasWebGL ? (
         <Canvas
           frameloop={isTabHidden ? 'never' : 'always'}
@@ -191,7 +197,7 @@ export function World() {
             position: CHAPTER_CAMERA_STATES[0].position.toArray(),
             fov: CHAPTER_CAMERA_STATES[0].fov,
             near: 0.2,
-            far: 100,
+            far: 450,
           }}
           style={{
             position: 'absolute',
@@ -213,6 +219,7 @@ export function World() {
             chapter={activeChapter}
             interactionEnabled={isInteractiveChapter}
             reducedMotion={reducedMotion}
+            overlayRef={overlayRef}
           />
         </Canvas>
       ) : (
@@ -224,6 +231,16 @@ export function World() {
           </div>
         </div>
       )}
+
+      {/* DOM Overlay for 3D station tags and active item HUDs outside Canvas */}
+      <WorldOverlay
+        ref={overlayRef}
+        items={items}
+        decisions={simulationResult.decisions}
+        diverterAngle={0}
+        isScanning={false}
+        selectedItemId={selectedItemId}
+      />
 
       {/* 3D Cursor Probe overlay fallback / reticle */}
       <WorldCursor

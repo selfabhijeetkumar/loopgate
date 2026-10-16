@@ -106,14 +106,14 @@ export function Header() {
           <span className="font-display font-bold tracking-wider text-sm sm:text-base text-text-primary">
             LOOP<span className="text-amber-500">GATE</span>
           </span>
-          <span className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest border border-border-subtle text-text-muted rounded-[2px]">
+          <span className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest border border-border-subtle text-text-muted rounded-[2px] whitespace-nowrap">
             LIVE TELEMETRY
           </span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav
-          className="hidden md:flex items-center gap-6 text-xs uppercase tracking-wider font-mono"
+          className="hidden md:flex items-center gap-3 lg:gap-6 text-xs uppercase tracking-wider font-mono whitespace-nowrap"
           aria-label="Main Navigation"
         >
           {NAV_LINKS.map(({ label, href }) => (
@@ -130,9 +130,9 @@ export function Header() {
           {isDev && (
             <Link
               href="/dev/engine"
-              className="ml-2 px-2.5 py-1 border border-amber-600/50 text-amber-400 hover:border-amber-500 hover:text-amber-300 rounded-[2px] transition-colors text-[10px]"
+              className="ml-2 px-2.5 py-1 border border-amber-600/50 text-amber-400 hover:border-amber-500 hover:text-amber-300 rounded-[2px] transition-colors text-[10px] whitespace-nowrap"
             >
-              Dev Engine
+              DEV ENGINE
             </Link>
           )}
         </nav>
@@ -196,9 +196,14 @@ export function Header() {
               onClick={() => setMobileMenuOpen(false)}
               className="block py-1.5 pl-2 text-amber-500 hover:text-amber-400 border-l-2 border-amber-600/40"
             >
-              Dev Engine
+              DEV ENGINE
             </Link>
           )}
+          <div className="pt-2 border-t border-border-subtle flex items-center gap-4 text-[11px] text-text-muted">
+            <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-400">About</Link>
+            <Link href="/faq" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-400">FAQ</Link>
+            <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-400">Contact</Link>
+          </div>
         </div>
       )}
     </header>

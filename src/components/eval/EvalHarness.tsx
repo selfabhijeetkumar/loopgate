@@ -206,6 +206,8 @@ export function EvalHarness() {
     setIsRunning(false);
   };
 
+  const evalSetLoaded = labels.length > 0 && missingFiles.length === 0;
+
   return (
     <div className="space-y-6 font-sans">
       {/* ------------------------------------------------------------------- */}
@@ -214,28 +216,43 @@ export function EvalHarness() {
       <div className="bg-bg-surface border border-border-subtle p-4 rounded-[2px] space-y-3 font-mono text-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-3">
           <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 bg-amber-500 rounded-none animate-pulse" />
+            <span
+              className={`w-2.5 h-2.5 rounded-none ${
+                evalSetLoaded ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+              }`}
+            />
             <h2 className="text-sm font-bold uppercase tracking-wider text-text-primary">
               EMPIRICAL EVALUATION HARNESS // OBSERVED PERFORMANCE
             </h2>
           </div>
-          <ProvenanceChip provenance="Observed" showPrefix={false} />
+          <ProvenanceChip provenance={evalSetLoaded ? 'Observed' : 'Simulated'} showPrefix={false} />
         </div>
 
-        {missingFiles.length > 0 && (
+        {!evalSetLoaded ? (
           <div
-            role="alert"
-            className="p-3 bg-[#090c10] border border-amber-500/40 text-amber-300 rounded-[2px] space-y-1.5"
+            role="status"
+            className="p-4 bg-[#090c10] border border-border-subtle rounded-[2px] space-y-2"
           >
-            <div className="font-bold text-amber-400 uppercase tracking-wide">
-              [AWAITING TEST PHOTOGRAPHS IN public/eval/]
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-bg-elevated border border-border-default text-text-muted font-bold text-[10px] uppercase tracking-wider">
+                STATUS
+              </span>
+              <span className="font-bold text-amber-400 uppercase tracking-wide">
+                No eval set loaded
+              </span>
             </div>
             <p className="leading-relaxed text-[11px] text-text-secondary">
-              The dataset template is loaded with {labels.length} annotated image slots in{' '}
-              <code className="text-amber-400">public/eval/labels.json</code>. Place your 20 to 30 real photos in{' '}
-              <code className="text-amber-400">public/eval/</code>. As per project guidelines, no scraped, downloaded, or
-              AI-generated images may be used.
+              No validation photographs are currently present in <code className="text-amber-400">public/eval/</code>.
+              The dataset manifest contains {labels.length} annotated slots in{' '}
+              <code className="text-amber-400">public/eval/labels.json</code>. Real statistical evaluations, per-class
+              accuracy, confusion matrices, and observed latency will appear here only when real validation photos are loaded
+              and evaluated. In accordance with competition rules, no synthetic, scraped, or invented evaluation statistics
+              are displayed.
             </p>
+          </div>
+        ) : (
+          <div className="p-3 bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 rounded-[2px] text-[11px]">
+            ✓ Validation dataset loaded: {labels.length} photos ready for empirical inference.
           </div>
         )}
 
@@ -257,15 +274,21 @@ export function EvalHarness() {
       <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-surface border border-border-subtle p-3 rounded-[2px] font-mono text-xs">
         <div className="flex items-center gap-3">
           <button
-            disabled={isRunning || labels.length === 0}
+            disabled={isRunning || !evalSetLoaded}
             onClick={runEvaluation}
             id="run-eval-btn"
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-bg-primary font-bold uppercase tracking-wider rounded-[2px] disabled:opacity-40 transition-colors"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-bg-primary font-bold uppercase tracking-wider rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {isRunning ? `Evaluating [${currentIndex}/${labels.length}]...` : 'Run Evaluation'}
+            {isRunning
+              ? `Evaluating [${currentIndex}/${labels.length}]...`
+              : evalSetLoaded
+              ? 'Run Evaluation'
+              : 'No eval set loaded'}
           </button>
           <span className="text-text-muted">
-            {labels.length} image targets configured in dataset template
+            {evalSetLoaded
+              ? `${labels.length} image targets configured in dataset template`
+              : 'Waiting for validation photos in public/eval/'}
           </span>
         </div>
 
@@ -282,6 +305,16 @@ export function EvalHarness() {
       {/* ------------------------------------------------------------------- */}
       {/* 3. Metrics Summary Cards (Observed Numbers)                         */}
       {/* ------------------------------------------------------------------- */}
+      {!metrics && !evalSetLoaded && (
+        <div className="bg-bg-surface border border-dashed border-border-subtle p-8 rounded-[2px] text-center font-mono space-y-2">
+          <div className="text-text-muted text-xs uppercase tracking-wider">Metrics Unavailable</div>
+          <div className="text-sm font-bold text-text-secondary">No eval set loaded</div>
+          <p className="text-[11px] text-text-muted max-w-md mx-auto">
+            Place 20 to 30 ground-truth photos into <code className="text-amber-400">public/eval/</code> and click &apos;Run Evaluation&apos; to measure observed accuracy and recall.
+          </p>
+        </div>
+      )}
+
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono">
           {/* Overall Accuracy */}

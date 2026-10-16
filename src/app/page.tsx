@@ -32,6 +32,53 @@ export default function HomePage() {
       <main className="relative z-10 flex-1 flex flex-col min-h-screen text-text-primary">
 
         {/* ----------------------------------------------------------------- */}
+        {/* START HERE STRIP: for unattended judges                           */}
+        {/* ----------------------------------------------------------------- */}
+        <div
+          className="relative z-20 w-full bg-[#060a0e]/90 border-b border-amber-500/30 px-4 sm:px-6 lg:px-8 py-2.5"
+          role="complementary"
+          aria-label="Judge orientation strip"
+        >
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] font-mono">
+            <div className="flex items-center gap-2.5 text-amber-400">
+              <span className="w-1.5 h-1.5 bg-amber-500 rounded-none animate-pulse flex-shrink-0" />
+              <span className="uppercase tracking-wider font-bold">DSU Code Clash 2.0 — PS06 Submission</span>
+              <span className="text-text-muted hidden sm:inline">|</span>
+              <span className="text-text-muted hidden sm:inline">Simulation runs without model download. CV activates via Evidence Lab upload.</span>
+            </div>
+            <div className="flex items-center gap-3 text-text-muted">
+              <a
+                href="https://github.com/selfabhijeetkumar/loopgate"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-amber-400 transition-colors"
+                aria-label="GitHub repository"
+              >
+                GitHub
+              </a>
+              <span>/</span>
+              <a
+                href="https://github.com/selfabhijeetkumar/loopgate/blob/main/README.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-amber-400 transition-colors"
+              >
+                README
+              </a>
+              <span>/</span>
+              <a
+                href="https://github.com/selfabhijeetkumar/loopgate/blob/main/SUBMISSION.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-amber-400 transition-colors"
+              >
+                SUBMISSION.md
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* ----------------------------------------------------------------- */}
         {/* CHAPTER 0: HERO (Wide establishing view, floating hazard objects) */}
         {/* ----------------------------------------------------------------- */}
         <section
@@ -285,7 +332,7 @@ export default function HomePage() {
               </h2>
             </div>
             <div className="text-xs font-mono text-text-muted">
-              Client-Side OWL-ViT &amp; CLIP // Live Twin Link
+              Client-Side DETR &amp; CLIP // Live Twin Link
             </div>
           </div>
 

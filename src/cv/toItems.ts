@@ -172,13 +172,13 @@ export function mapDetectionToItem(
 
     detectionsList = [
       {
-        id: `${itemId}-det-owlvit`,
+        id: `${itemId}-det-detr`,
         box: detection.box,
         label: detection.label,
         materialClass: expectedClass || primaryClass,
         hazardProbability,
         confidence: Number(detection.score.toFixed(4)),
-        source: 'owlvit-base-patch32',
+        source: 'detr-resnet-50',
         provenance,
       },
       {

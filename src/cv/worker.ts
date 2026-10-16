@@ -114,7 +114,7 @@ let classifierPipeline: any = null;
 let loadStatus: PipelineLoadStatus = 'idle';
 let loadError: string | null = null;
 let activeDevice: 'webgpu' | 'wasm' = 'wasm';
-let activeDetectorModel = 'Xenova/owlvit-base-patch32';
+let activeDetectorModel = 'Xenova/detr-resnet-50';
 let activeClipModel = 'Xenova/clip-vit-base-patch32';
 
 function createProgressCallback(modelLabel: string) {
@@ -145,7 +145,7 @@ async function initPipelines(options?: {
 }) {
   const device = options?.preferredDevice || 'wasm';
   const dtype = options?.dtype || (device === 'webgpu' ? 'fp32' : 'q8');
-  const detectorModel = options?.detectorModel || 'Xenova/owlvit-base-patch32';
+  const detectorModel = options?.detectorModel || 'Xenova/detr-resnet-50';
   const clipModel = options?.clipModel || 'Xenova/clip-vit-base-patch32';
 
   loadStatus = 'loading';
@@ -268,7 +268,7 @@ async function smokeTestClip(imageBuffer?: ArrayBuffer, imageBlob?: Blob, width?
 }
 
 async function smokeTestDetector(
-  modelName: 'Xenova/owlvit-base-patch32' | 'Xenova/detr-resnet-50',
+  modelName: 'Xenova/detr-resnet-50',
   dtype: 'fp32' | 'q8',
   device: 'wasm' | 'webgpu',
   imageBuffer?: ArrayBuffer,
