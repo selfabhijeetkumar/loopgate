@@ -589,7 +589,7 @@ Built for **DSU Code Clash 2.0, Problem Statement 06**.
 
 | Member | Role |
 |---|---|
-| Abhijeet Kumar | Team lead. Concept and system design, engineering direction, integration, testing and deployment. |
+| Abhijeet Kumar | Team lead.<br>Problem selection and product concept (PS06, uncertainty gate and replay).<br>System design: engine rules, safety floor, honesty and provenance rules.<br>Design direction: visual language, 3D world and interaction.<br>Directed AI-assisted development (Antigravity) and reviewed each phase against tests and the live site.<br>Security review, deployment on Vercel and the GitHub repository.<br>README, submission package and demo video. |
 | Vaishnavi Isrannanvar | Quality testing: tested the deployed site on her own devices and reported issues.<br>Test photos: took the object photos for the evaluation set with her own phone.<br>Content review: read the FAQ, README and slides for clarity and errors.<br>Demo video: recorded or narrated part of the demo video. |
 
 **How this was built:** the concept, design and engineering decisions were made by the team lead. The code was produced with AI-assisted development tools (Antigravity) under his direction.
