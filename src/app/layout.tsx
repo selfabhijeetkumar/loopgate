@@ -25,9 +25,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: 'Loopgate | Smart Recycling & Waste Uncertainty Gate',
+  title: 'Loopgate | Uncertainty-Gated Waste Routing (Simulated Digital Twin)',
   description:
-    'Computer vision sorting assistant, uncertainty gate, and connected 3D digital twin. Routes risky waste before it reaches the compactor. Simulated estimates.',
+    'Simulated digital twin demonstrating uncertainty-gated waste diversion before the compactor. Built for DSU Code Clash 2.0 (PS06).',
   icons: {
     icon: '/icon.svg',
   },

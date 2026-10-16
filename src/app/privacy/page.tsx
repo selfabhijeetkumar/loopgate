@@ -82,21 +82,35 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section aria-labelledby="genai-heading">
-            <h2 id="genai-heading" className="text-base font-display font-bold text-text-primary mb-3">
-              GenAI Explanation Feature
+          <section aria-labelledby="dpdp-heading">
+            <h2 id="dpdp-heading" className="text-base font-display font-bold text-text-primary mb-3">
+              Data Protection &amp; Indian DPDP Act Principles
             </h2>
             <p>
-              The optional GenAI explanation feature (if enabled) sends a structured JSON payload
-              containing item metadata (material class, gate score, route, hazard probability) and
-              engine assumption values to Google&apos;s Generative Language API. No image data,
-              personal information, or user-identifying data is included in this payload.
+              Loopgate was built adhering to the core tenets of the Indian Digital Personal Data Protection (DPDP) Act, 2023 as an architectural design principle: data minimization, purpose limitation, transparency, and explicit user consent. We do not store, process, or sell personal identifiers.
+            </p>
+            <p className="mt-2 text-xs text-text-muted italic border-l-2 border-amber-500/60 pl-3 py-1">
+              Legal notice: The above reference to the Indian DPDP Act represents a software engineering design philosophy for minimal data handling and does not constitute a formal legal compliance claim or warranty. This text is not legal advice.
+            </p>
+          </section>
+
+          <section aria-labelledby="genai-heading">
+            <h2 id="genai-heading" className="text-base font-display font-bold text-text-primary mb-3">
+              AI Providers &amp; Explanation Endpoints
+            </h2>
+            <p>
+              Loopgate supports optional generative AI explanations for personalized waste recommendations. The backend explanation router supports a failover chain across configured providers:
+            </p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-xs text-text-secondary">
+              <li><strong>Google Gemini</strong> (Google Generative AI)</li>
+              <li><strong>Groq</strong> (Groq Cloud Inference)</li>
+              <li><strong>OpenRouter</strong> (Unified LLM Gateway)</li>
+            </ul>
+            <p className="mt-3">
+              <strong>Simulated Data Only:</strong> Explanation requests sent to these providers contain <em>only</em> simulated engine numbers (hazard probability, gate score, material class, route). No photos, pixel buffers, filenames, or user personal data are ever included in explanation requests.
             </p>
             <p className="mt-2">
-              The API key used is stored as a server-side environment variable and is never exposed
-              to your browser. All GenAI requests go through a server-side API route
-              (<code className="text-xs bg-bg-surface px-1 py-0.5">/api/explain</code>) which strips
-              identifying information before forwarding.
+              <strong>Optional Second-Opinion Feature:</strong> Only the optional second-opinion button sends an image file, strictly to Google Gemini Vision, and only after an explicit on-screen user consent dialog is confirmed. Free-tier providers may maintain their own data-use terms; users can consult each provider&apos;s privacy policy directly.
             </p>
           </section>
 

@@ -14,6 +14,26 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { Item } from '@/domain/types';
 import type { ItemDecision } from '@/engine';
 
+function formatRouteLabel(route: string): string {
+  switch (route) {
+    case 'hazard_hold':
+    case 'hazard_quarantine':
+      return 'Hazard hold';
+    case 'inspection_line':
+      return 'Inspection bay';
+    case 'recyclable_bay':
+      return 'Recyclable bin';
+    case 'reusable_bay':
+      return 'Reusable bin';
+    case 'biodegradable_bay':
+      return 'Biodegradable bin';
+    case 'compactor':
+      return 'Main compactor';
+    default:
+      return route.replace(/_/g, ' ');
+  }
+}
+
 export interface WorldOverlayHandle {
   updateStation: (
     index: number,
@@ -144,7 +164,7 @@ export const WorldOverlay = forwardRef<WorldOverlayHandle, WorldOverlayProps>(
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
               <span>route:</span>
-              <span style="color: #fbbf24; font-weight: 700;">${data.route}</span>
+              <span style="color: #fbbf24; font-weight: 700;">${formatRouteLabel(data.route)}</span>
             </div>
             <div style="color: #94a3b8; font-size: 11px; margin-top: 4px; border-top: 1px solid #334155; padding-top: 2px;">[SIMULATED]</div>
           `;
@@ -285,7 +305,7 @@ export const WorldOverlay = forwardRef<WorldOverlayHandle, WorldOverlayProps>(
               <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-300 mt-1">
                 <div>p(haz): <span className="text-red-400 font-bold">{(item08.hazardProbability * 100).toFixed(1)}%</span></div>
                 <div>gate: {item08Dec.gateScore.toFixed(3)}</div>
-                <div>route: <span className="text-amber-400 font-bold">{item08Dec.route}</span></div>
+                <div>route: <span className="text-amber-400 font-bold">{formatRouteLabel(item08Dec.route)}</span></div>
                 <div>floor: <span className="text-red-400 font-bold">TRUE (EA-01)</span></div>
               </div>
             </div>
@@ -298,7 +318,7 @@ export const WorldOverlay = forwardRef<WorldOverlayHandle, WorldOverlayProps>(
               <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-300 mt-1">
                 <div>p(haz): {(itemAmbiguous.hazardProbability * 100).toFixed(1)}%</div>
                 <div>gate: {itemAmbiguousDec.gateScore.toFixed(3)}</div>
-                <div>route: <span className="text-amber-400 font-bold">{itemAmbiguousDec.route}</span></div>
+                <div>route: <span className="text-amber-400 font-bold">{formatRouteLabel(itemAmbiguousDec.route)}</span></div>
                 <div>status: <span className="text-sky-400 font-bold">DISPUTED</span></div>
               </div>
             </div>

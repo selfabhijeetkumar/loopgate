@@ -23,8 +23,8 @@ const FAQS: FaqEntry[] = [
     a: 'Stage 1 uses Xenova/detr-resnet-50 (DETR, COCO object detector) running via ONNX Runtime Web in a Web Worker. Stage 2 uses Xenova/clip-vit-base-patch32 (CLIP zero-shot image classifier) to classify each detected crop into material categories. Both run entirely in the browser — no server-side inference.',
   },
   {
-    q: 'Why was OWL-ViT removed from the pipeline?',
-    a: 'OWL-ViT (Xenova/owlvit-base-patch32) fails ONNX Runtime session creation due to a missing Cast node implementation in ONNX Runtime Web (ERROR_CODE: 1 on WebGPU, ERROR_CODE: 9 on WASM). Rather than present a broken model, the production pipeline was switched to DETR ResNet-50 which loads reliably on WASM.',
+    q: 'How does the vision pipeline detect and classify items?',
+    a: 'The pipeline uses a multi-stage chain: (1) generic DETR detector (Xenova/detr-resnet-50) to localize common objects, (2) CLIP zero-shot classification (Xenova/clip-vit-base-patch32) on cropped boxes into 4 recovery classes and battery indicators, and (3) an optional hand-drawn box tool for human verification of objects not recognized by the generic detector.',
   },
   {
     q: 'What is the safety floor (EA-01)?',

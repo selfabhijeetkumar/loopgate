@@ -13,9 +13,9 @@ import { EvidenceLab } from '@/components/evidence/EvidenceLab';
 import { SAFETY_FLOOR, HAZARD_WEIGHT, UNCERTAINTY_WEIGHT } from '@/engine';
 
 export const metadata = {
-  title: 'Loopgate // Autonomous Uncertainty Gating for High-Speed Materials Recovery',
+  title: 'Loopgate | Uncertainty-Gated Waste Routing (Simulated Digital Twin)',
   description:
-    'Routes risky waste before it reaches the compactor. Simulated estimates for municipal materials recovery facilities.',
+    'Simulated digital twin demonstrating uncertainty-gated waste diversion before the compactor. Built for DSU Code Clash 2.0 (PS06).',
 };
 
 export default function HomePage() {

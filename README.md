@@ -1,6 +1,6 @@
 # Loopgate
 
-> **Autonomous Uncertainty Gating for High-Speed Materials Recovery**  
+> **Uncertainty-Gated Waste Routing (Simulated Digital Twin)**  
 > Problem Statement 06 // DSU Code Clash 2.0
 
 Loopgate is an epistemic uncertainty router and 3D digital twin that identifies and intercepts hazardous waste items (lithium-ion batteries, vape pens, aerosol canisters) before they reach automated municipal baling compactors.

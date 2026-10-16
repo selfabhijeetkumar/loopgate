@@ -84,7 +84,7 @@ async function callGemini(input: EngineExplanationInput, timeoutMs = 6000): Prom
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const prompt = buildPrompt(input);
@@ -142,6 +142,8 @@ async function callOpenAICompatible(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://loopgate.vercel.app',
+        'X-Title': 'Loopgate Waste Router',
       },
       body: JSON.stringify({
         model,
@@ -189,7 +191,7 @@ export async function generateExplanationWithChain(
 
   // 1. Gemini
   if (process.env.GEMINI_API_KEY) {
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
     candidates.push({
       name: 'Google Gemini',
       model,
@@ -199,7 +201,7 @@ export async function generateExplanationWithChain(
 
   // 2. Groq
   if (process.env.GROQ_API_KEY) {
-    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    const model = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
     candidates.push({
       name: 'Groq',
       model,
@@ -216,7 +218,7 @@ export async function generateExplanationWithChain(
 
   // 3. OpenRouter
   if (process.env.OPENROUTER_API_KEY) {
-    const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
+    const model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-lightning:free';
     candidates.push({
       name: 'OpenRouter',
       model,

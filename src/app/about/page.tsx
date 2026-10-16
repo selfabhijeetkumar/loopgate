@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { ProvenanceChip } from '@/components/ProvenanceChip';
 
 export const metadata: Metadata = {
-  title: 'About Loopgate | Autonomous Uncertainty Gating for Materials Recovery',
+  title: 'About | Loopgate (Simulated Digital Twin)',
   description:
-    'Loopgate is a browser-native simulation of an uncertainty-gated waste sorting system. Learn about the project, its architecture, and how it was built for DSU Code Clash 2.0 (PS06).',
+    'About Loopgate: uncertainty-gated waste diversion simulation prototype built for DSU Code Clash 2.0 (PS06).',
 };
 
 export default function AboutPage() {
@@ -35,8 +35,8 @@ export default function AboutPage() {
             About <span className="text-amber-400">Loopgate</span>
           </h1>
           <p className="text-base text-text-secondary font-sans leading-relaxed max-w-2xl">
-            Loopgate is a browser-native prototype that simulates autonomous uncertainty gating
-            for high-speed materials recovery facilities. It was built for DSU Code Clash 2.0,
+            Loopgate is a browser-native prototype that simulates uncertainty-gated waste diversion
+            for materials recovery facilities. It was built for DSU Code Clash 2.0,
             Problem Statement 06.
           </p>
         </div>
