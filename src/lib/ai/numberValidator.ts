@@ -82,11 +82,62 @@ export function extractNumbersFromText(text: string): number[] {
 export interface ValidationResult {
   valid: boolean;
   rejectedNumbers: number[];
+  rejectionReasons: string[];
   text: string;
 }
 
+export const FORBIDDEN_WORDS_REGEX = /\b(prevents?|fire\s+risks?|guarantees?)\b/i;
+export const SNAKE_CASE_REGEX = /\b[a-z0-9]+_[a-z0-9_]+\b/i;
+export const CAMEL_CASE_REGEX = /\b[a-z][a-z0-9]*[A-Z][a-zA-Z0-9]*\b/;
+
 /**
- * Validates that all numbers in the generated explanation originate from the engine input.
+ * Checks for forbidden words: prevent, prevents, fire risk, fire risks, guarantee, guarantees.
+ */
+export function checkForbiddenWords(text: string): string[] {
+  const matches = text.match(new RegExp(FORBIDDEN_WORDS_REGEX, 'gi'));
+  return matches ? Array.from(new Set(matches.map((m) => m.toLowerCase()))) : [];
+}
+
+/**
+ * Checks for raw programming identifiers: snake_case and camelCase words.
+ */
+export function checkIdentifiers(text: string): { snakeCase: string[]; camelCase: string[] } {
+  const words = text.match(/\b[A-Za-z0-9_]+\b/g) || [];
+  const snakeCase: string[] = [];
+  const camelCase: string[] = [];
+
+  for (const w of words) {
+    if (w.includes('_') && SNAKE_CASE_REGEX.test(w)) {
+      snakeCase.push(w);
+    } else if (CAMEL_CASE_REGEX.test(w)) {
+      camelCase.push(w);
+    }
+  }
+
+  return {
+    snakeCase: Array.from(new Set(snakeCase)),
+    camelCase: Array.from(new Set(camelCase)),
+  };
+}
+
+/**
+ * Verifies that the explanation does NOT compare gateScore / gate score with the safety floor.
+ * The safety floor applies to hazard probability, while the gate score is compared with the inspection threshold.
+ */
+export function checkGateScoreVsSafetyFloor(text: string): boolean {
+  // Split into sentences / clauses
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  for (const s of sentences) {
+    if (/gate[\s_]*score/i.test(s) && /safety[\s_]*floor/i.test(s)) {
+      return true; // Invalid policy comparison detected
+    }
+  }
+  return false;
+}
+
+/**
+ * Validates that all numbers originate from engine input AND that no forbidden vocabulary,
+ * raw identifiers, or policy misrepresentations are present.
  */
 export function validateGeneratedExplanation(
   generatedText: string,
@@ -95,12 +146,12 @@ export function validateGeneratedExplanation(
   const allowed = extractAllowedNumbers(input);
   const foundNumbers = extractNumbersFromText(generatedText);
   const rejectedNumbers: number[] = [];
+  const rejectionReasons: string[] = [];
 
+  // 1. Number Validation
   for (const num of foundNumbers) {
-    // Check if directly in set
     if (allowed.has(num)) continue;
 
-    // Check with loose floating point epsilon tolerance (0.05)
     let matched = false;
     for (const validNum of allowed) {
       if (Math.abs(validNum - num) < 0.05) {
@@ -114,9 +165,34 @@ export function validateGeneratedExplanation(
     }
   }
 
+  if (rejectedNumbers.length > 0) {
+    rejectionReasons.push(`Hallucinated numbers detected: ${rejectedNumbers.join(', ')}`);
+  }
+
+  // 2. Forbidden Words Validation
+  const forbidden = checkForbiddenWords(generatedText);
+  if (forbidden.length > 0) {
+    rejectionReasons.push(`Forbidden word(s) detected: ${forbidden.join(', ')}`);
+  }
+
+  // 3. Identifier Leak Validation
+  const idents = checkIdentifiers(generatedText);
+  if (idents.snakeCase.length > 0) {
+    rejectionReasons.push(`Snake_case identifier(s) detected: ${idents.snakeCase.join(', ')}`);
+  }
+  if (idents.camelCase.length > 0) {
+    rejectionReasons.push(`CamelCase identifier(s) detected: ${idents.camelCase.join(', ')}`);
+  }
+
+  // 4. Policy Comparison Validation
+  if (checkGateScoreVsSafetyFloor(generatedText)) {
+    rejectionReasons.push('Gate score incorrectly compared with safety floor in the same sentence');
+  }
+
   return {
-    valid: rejectedNumbers.length === 0,
+    valid: rejectedNumbers.length === 0 && rejectionReasons.length === 0,
     rejectedNumbers,
+    rejectionReasons,
     text: generatedText,
   };
 }

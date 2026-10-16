@@ -52,6 +52,7 @@ export function formatRouteLabel(route: string): string {
 
 /**
  * Returns a deterministic, verified explanation grounded strictly in engine values.
+ * All route names are human labels, zero programming identifiers, zero forbidden words.
  */
 export function getTemplateExplanation(input: EngineExplanationInput): string {
   const { item, decision, profile } = input;
@@ -61,51 +62,51 @@ export function getTemplateExplanation(input: EngineExplanationInput): string {
   const threshStr = decision.threshold.toFixed(2);
   const routeLabel = formatRouteLabel(decision.route);
 
-  // 1. HAZARDOUS
-  if (item.primaryClass === 'hazardous' || item.hazardProbability >= decision.threshold) {
+  // 1. HAZARDOUS (or Above Safety Floor)
+  if (item.primaryClass === 'hazardous' || item.hazardProbability >= 0.30) {
     if (profile === 'household') {
-      return `Safety Notice for Home Segregation: ${item.name} (${item.id}) carries an estimated ${hazPct}% hazard probability in this simulated scenario. Because this reaches or exceeds the ${threshStr} safety floor, it has been routed to "${routeLabel}" (gate score ${gateScoreStr}). Please never place lithium-ion batteries or pressurized containers in municipal blue recycling bins; bring them to an authorized e-waste collection point.`;
+      return `In this simulated scenario, your ${item.name} carries an estimated ${hazPct}% hazard probability, which meets the 0.30 safety floor and diverts it to ${routeLabel}. Separately, its gate score of ${gateScoreStr} is evaluated against the ${threshStr} inspection threshold. Please bring discarded batteries and electronics to an authorized community e-waste collection center rather than municipal household bins.`;
     }
     if (profile === 'hostel') {
-      return `Common Area Sorting Alert: ${item.name} (${item.id}) was detected with ${hazPct}% estimated hazard probability. The automated gate scored this at ${gateScoreStr} against the ${threshStr} threshold, immediately diverting it to "${routeLabel}". For campus hostels, discard old vape pens, power banks, and electronics in designated e-waste drop bins at reception rather than floor trash chutes.`;
+      return `In this simulated scenario, the ${item.name} shows an estimated ${hazPct}% hazard probability, triggering the 0.30 safety floor for immediate diversion to ${routeLabel}. The item also registered a gate score of ${gateScoreStr} against the ${threshStr} inspection threshold. Campus residents should deposit electronic accessories in designated hall reception drop boxes instead of floor chutes.`;
     }
     // facility_operator
-    return `Operational Intercept Directive: Item ${item.id} (${item.name}) flagged with P(haz)=${hazPct}% and detector confidence ${confPct}%. Gate score computed at ${gateScoreStr} exceeding threshold ${threshStr} (safety floor triggered: ${decision.floorTriggered ? 'TRUE' : 'FALSE'}). Route assigned: ${routeLabel}. Pneumatic diverter actuated to isolate object prior to high-pressure compactor intake.`;
+    return `In this simulated scenario, the ${item.name} triggered the 0.30 safety floor with an estimated hazard probability of ${hazPct}% and detector confidence of ${confPct}%. The gate score evaluated to ${gateScoreStr} against the ${threshStr} inspection threshold, assigning the item to ${routeLabel}. Pneumatic diverter mechanisms actuated to isolate the unit prior to compactor intake.`;
   }
 
   // 2. RECYCLABLE
   if (item.primaryClass === 'recyclable') {
     if (profile === 'household') {
-      return `Recycling Guidance: ${item.name} (${item.id}) evaluated with low hazard probability (${hazPct}%) and ${confPct}% model confidence. Gate score is ${gateScoreStr}, safely below the ${threshStr} threshold. Assigned route: "${routeLabel}". Rinse thoroughly and place in clean container recycling.`;
+      return `In this simulated scenario, your ${item.name} carries a low estimated hazard probability of ${hazPct}% and ${confPct}% model confidence. Its gate score of ${gateScoreStr} is safely below the ${threshStr} inspection threshold, directing it to ${routeLabel}. Please rinse thoroughly and place in clean container recycling.`;
     }
     if (profile === 'hostel') {
-      return `Hostel Recycling Stream: ${item.name} (${item.id}) verified as recyclable material (confidence ${confPct}%, estimated hazard ${hazPct}%). Gate score is ${gateScoreStr} vs threshold ${threshStr}. Directed to "${routeLabel}". Flatten bottles and cans before depositing in corridor blue bins.`;
+      return `In this simulated scenario, the ${item.name} is verified as recyclable material with ${confPct}% detector confidence and ${hazPct}% estimated hazard probability. Its gate score of ${gateScoreStr} remains below the ${threshStr} inspection threshold, routing it to ${routeLabel}. Flatten containers before depositing them in corridor recycling stations.`;
     }
     // facility_operator
-    return `Commodity Stream Flow: Item ${item.id} (${item.name}) processed with P(haz)=${hazPct}%, confidence ${confPct}%, gate score ${gateScoreStr}. Operating well below threshold ${threshStr}. Permitted through to "${routeLabel}" baling manifold without diversion delay.`;
+    return `In this simulated scenario, ${item.name} was processed with an estimated hazard probability of ${hazPct}% and ${confPct}% model confidence. The computed gate score of ${gateScoreStr} is below the ${threshStr} inspection threshold, routing it to ${routeLabel}. The commodity stream proceeds directly through to baling.`;
   }
 
   // 3. REUSABLE
   if (item.primaryClass === 'reusable') {
     if (profile === 'household') {
-      return `Reuse Recommendation: ${item.name} (${item.id}) shows ${hazPct}% hazard probability and ${confPct}% confidence. Gate score ${gateScoreStr} (threshold ${threshStr}). Assigned to "${routeLabel}". Consider donation or repair before discarding.`;
+      return `In this simulated scenario, ${item.name} demonstrates an estimated hazard probability of ${hazPct}% and ${confPct}% detector confidence. Its gate score of ${gateScoreStr} is below the ${threshStr} inspection threshold, assigning it to ${routeLabel}. Consider repair or local community donation prior to disposal.`;
     }
     if (profile === 'hostel') {
-      return `Student Resource Re-circulation: ${item.name} (${item.id}) detected with ${confPct}% confidence and ${hazPct}% hazard estimate. Assigned route: "${routeLabel}" (gate score ${gateScoreStr}). Place in semester-end move-out exchange racks.`;
+      return `In this simulated scenario, ${item.name} was identified with ${confPct}% model confidence and ${hazPct}% estimated hazard risk. The gate score of ${gateScoreStr} routes it to ${routeLabel} for secondary redistribution. Please place functional items in campus semester exchange racks.`;
     }
     // facility_operator
-    return `Secondary Recovery Stream: Item ${item.id} (${item.name}) evaluated at gate score ${gateScoreStr} (threshold ${threshStr}, P(haz)=${hazPct}%). Routed to "${routeLabel}" secondary sorting station for manual recovery.`;
+    return `In this simulated scenario, ${item.name} registered an estimated hazard probability of ${hazPct}% and gate score of ${gateScoreStr}. Operating within the ${threshStr} inspection threshold, the item is routed to ${routeLabel}. Units are routed to the manual recovery spur.`;
   }
 
   // 4. BIODEGRADABLE
   if (profile === 'household') {
-    return `Compost Sorting: ${item.name} (${item.id}) classified with ${confPct}% confidence and ${hazPct}% estimated hazard. Gate score ${gateScoreStr} vs threshold ${threshStr}. Directed to "${routeLabel}". Dispose in organic green waste.`;
+    return `In this simulated scenario, ${item.name} is classified with ${confPct}% model confidence and an estimated hazard probability of ${hazPct}%. Its gate score of ${gateScoreStr} satisfies the ${threshStr} inspection threshold, routing it to ${routeLabel}. Dispose in designated organic compost collection.`;
   }
   if (profile === 'hostel') {
-    return `Mess / Canteen Organic Stream: ${item.name} (${item.id}) evaluated at gate score ${gateScoreStr} with ${hazPct}% hazard risk. Assigned to "${routeLabel}". Direct to dining hall wet waste bins.`;
+    return `In this simulated scenario, ${item.name} was evaluated with ${hazPct}% hazard probability and routed to ${routeLabel} with a gate score of ${gateScoreStr}. The gate score meets the ${threshStr} inspection threshold for organic recovery. Direct cafeteria residuals to dining hall wet waste bins.`;
   }
   // facility_operator
-  return `Organic Diversion Stream: Item ${item.id} (${item.name}) verified biodegradable (P(haz)=${hazPct}%, gate score ${gateScoreStr}). Routed to "${routeLabel}" composting line.`;
+  return `In this simulated scenario, ${item.name} is verified as biodegradable material with an estimated hazard probability of ${hazPct}% and gate score of ${gateScoreStr}. Operating within the ${threshStr} inspection threshold, the unit is routed to ${routeLabel}. Organic matter moves forward to the composting stream.`;
 }
 
 /**
@@ -119,10 +120,10 @@ export function getBatchSummaryExplanation(
 ): string {
   const rateStr = diversionRatePct.toFixed(1);
   if (profile === 'household') {
-    return `Batch Summary for Household Stream: Processed ${itemCount} items in this simulated scenario. ${divertedCount} hazardous or ambiguous items were safely isolated, achieving a ${rateStr}% safe material recovery rate.`;
+    return `In this simulated scenario, the batch analysis evaluated ${itemCount} items from the residential stream. The automated gate routed ${divertedCount} items to inspection bay or hazard hold, achieving a ${rateStr}% safe recovery rate.`;
   }
   if (profile === 'hostel') {
-    return `Campus Batch Telemetry: Analyzed ${itemCount} items from hostel bins. Gating mechanism intercepted ${divertedCount} items for manual verification, yielding an estimated ${rateStr}% stream diversion efficiency.`;
+    return `In this simulated scenario, campus facility sensors evaluated ${itemCount} items from hostel bins. Gating mechanisms intercepted ${divertedCount} items for inspection, resulting in a ${rateStr}% recovery efficiency.`;
   }
-  return `Facility Operational Shift Audit: ${itemCount} total units processed across conveyor. ${divertedCount} units diverted to inspection bay / hazard hold (gate threshold triggered). Overall simulated recovery diversion rate: ${rateStr}%.`;
+  return `In this simulated scenario, operational line telemetry recorded ${itemCount} total items across the belt. Diverter actuators diverted ${divertedCount} items to inspection bay or hazard hold based on policy thresholds, yielding a ${rateStr}% stream balance.`;
 }

@@ -545,7 +545,7 @@ export function ReplayTheatre({
           {/* Dual SVG Lanes with Solid Dark Background Scrim */}
           <div className="bg-[#090c10] border border-border-default p-4 rounded-[2px] space-y-4">
             <SvgLane
-              label="Branch A — Standard Line (No Gate)"
+              label="Branch A // Standard Line (No Gate)"
               branchKey="A"
               items={activeItems}
               snapshot={baseline}
@@ -554,7 +554,7 @@ export function ReplayTheatre({
             />
             <div className="border-t border-border-subtle/80" />
             <SvgLane
-              label="Branch B — Loopgate Gated Policy"
+              label="Branch B // Loopgate Gated Policy"
               branchKey="B"
               items={activeItems}
               snapshot={gated}

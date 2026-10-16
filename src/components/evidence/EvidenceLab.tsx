@@ -518,7 +518,7 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
         </div>
 
         {/* Generic Detector Plain UI Note */}
-        <div className="text-[11px] font-mono text-text-muted bg-[#080b0f] border border-border-subtle px-3 py-1.5 rounded-[2px] flex items-center gap-2">
+        <div className="col-span-1 md:col-span-12 text-[11px] font-mono text-text-muted bg-[#080b0f] border border-border-subtle px-3 py-1.5 rounded-[2px] flex items-center gap-2">
           <span className="w-1.5 h-1.5 bg-amber-500 rounded-none flex-shrink-0" />
           <span>
             Generic detector: finds common objects only (for example phone, bottle, remote). Items it does not know, such as power banks, need a hand-drawn box.
@@ -554,14 +554,14 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
       {errorMessage && (
         <div
           role="alert"
-          className="bg-[#12080a] border border-red-500/60 p-4 rounded-[2px] font-mono text-xs text-red-200 space-y-2"
+          className="bg-[#120e0a] border border-amber-500/60 p-4 rounded-[2px] font-mono text-xs text-amber-200 space-y-2"
         >
-          <div className="flex items-center justify-between text-red-400 font-bold uppercase tracking-wider text-[11px]">
+          <div className="flex items-center justify-between text-amber-400 font-bold uppercase tracking-wider text-[11px]">
             <span>[CV PIPELINE FAILURE // INFERENCE HALTED]</span>
             <span className="text-text-muted text-[10px]">INTEGRITY CONTRACT ENFORCED</span>
           </div>
-          <p className="text-red-300 font-mono text-xs leading-relaxed break-all">{errorMessage}</p>
-          <div className="text-[11px] text-text-secondary pt-1 border-t border-red-500/20 flex flex-wrap gap-x-4 gap-y-1">
+          <p className="text-amber-300 font-mono text-xs leading-relaxed break-all">{errorMessage}</p>
+          <div className="text-[11px] text-text-secondary pt-1 border-t border-amber-500/20 flex flex-wrap gap-x-4 gap-y-1">
             <span>&bull; Web Worker session stopped safely</span>
             <span>&bull; Zero fake or simulated metrics created</span>
             <span className="text-amber-400 font-bold">&bull; You can draw boxes manually using &quot;Add box by hand&quot;</span>
@@ -831,6 +831,18 @@ export function EvidenceLab({ className = '', onRequestSecondOpinion }: Evidence
                       );
                     }
                   )}
+                </div>
+              )}
+
+              {/* Classification Error State if box crop/classification failed */}
+              {selectedItem.provenance !== 'Human-verified' && !selectedDetection?.clipProbabilities && (
+                <div className="bg-[#12080a] border border-amber-500/60 p-3 rounded-[2px] text-[11px] font-mono text-amber-200 space-y-1">
+                  <div className="flex items-center justify-between text-amber-400 font-bold">
+                    <span>[CLASSIFICATION FAILED // CROP INFERENCE ERROR]</span>
+                  </div>
+                  <p className="text-text-secondary text-[11px]">
+                    {selectedDetection?.classificationError || 'Zero-shot crop classification failed on this bounding box.'}
+                  </p>
                 </div>
               )}
 

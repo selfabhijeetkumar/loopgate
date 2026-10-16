@@ -20,7 +20,7 @@ const FAQS: FaqEntry[] = [
   },
   {
     q: 'What models does the CV pipeline use?',
-    a: 'Stage 1 uses Xenova/detr-resnet-50 (DETR, COCO object detector) running via ONNX Runtime Web in a Web Worker. Stage 2 uses Xenova/clip-vit-base-patch32 (CLIP zero-shot image classifier) to classify each detected crop into material categories. Both run entirely in the browser — no server-side inference.',
+    a: 'Stage 1 uses Xenova/detr-resnet-50 (DETR, COCO object detector) running via ONNX Runtime Web in a Web Worker. Stage 2 uses Xenova/clip-vit-base-patch32 (CLIP zero-shot image classifier) to classify each detected crop into material categories. Both run entirely in the browser, with zero server-side inference.',
   },
   {
     q: 'How does the vision pipeline detect and classify items?',
@@ -28,7 +28,7 @@ const FAQS: FaqEntry[] = [
   },
   {
     q: 'What is the safety floor (EA-01)?',
-    a: 'EA-01 is the invariant that any item with estimated hazard probability >= 0.30 must be diverted to the human-review lane — the compactor is never allowed to bale it. This threshold is configurable but has a minimum floor of 0.30. It is implemented in pure TypeScript in the engine and cannot be bypassed by the model layer.',
+    a: 'EA-01 is the invariant that any item with estimated hazard probability >= 0.30 is strictly barred from the compactor stream. Confident hazards route directly to Hazard hold, while uncertain or disputed items route to the Inspection bay for human verification. This rule is implemented deterministically in pure TypeScript in the engine and cannot be bypassed by operator configuration.',
   },
   {
     q: 'What do the provenance tags mean?',
@@ -40,7 +40,7 @@ const FAQS: FaqEntry[] = [
   },
   {
     q: 'What is the gate score?',
-    a: 'Gate score = (hazardWeight * hazardProbability) + (uncertaintyWeight * (1 - confidence)). If gate score >= safetyFloor, the item is diverted. The weights and floor are listed in the Assumptions table on the main page.',
+    a: 'The gate score = 0.65 * hazardProbability + 0.35 * uncertainty, where uncertainty combines model confidence and cross-model disagreement. If gate score >= inspection threshold, the item is diverted to the Inspection bay. Separately, the EA-01 safety floor independently bars any item with hazard probability >= 0.30 from reaching the compactor.',
   },
   {
     q: 'Can I run this locally?',

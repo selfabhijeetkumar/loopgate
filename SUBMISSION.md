@@ -41,7 +41,7 @@ before reaching the compactor. The gate is deterministic and auditable.
 
 - [x] **3D Facility Digital Twin** — six-chapter scroll-driven tour of the facility
 - [x] **In-Browser CV Pipeline** — DETR + CLIP running in a Web Worker, no server required
-- [x] **Uncertainty Gate** — EA-01 invariant: P(hazard) >= 0.30 always diverts
+- [x] **Uncertainty Gate** — EA-01 invariant: P(hazard) >= 0.30 always diverts (confident hazards to Hazard hold, uncertain to Inspection bay)
 - [x] **Evidence Lab** — upload a photo, run real object detection, see detection boxes
 - [x] **Replay Player** — step through item decisions with full provenance
 - [x] **Assumptions Table** — every constant is visible and labelled with its source

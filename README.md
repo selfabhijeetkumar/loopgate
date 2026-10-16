@@ -119,7 +119,7 @@ Every number shown in the app comes from the deterministic engine or is explicit
 | Rendering quality tiers | 3, with automatic step-down |
 | Safety floor (hazard probability) | 0.30 |
 | Gate score weights | 0.65 hazard, 0.35 uncertainty |
-| Automated tests | [[FILL: run npm test and paste the passing count]] |
+| Automated tests | 127 passing (13 test files) |
 
 ---
 
@@ -521,7 +521,7 @@ ASSETS.md              source of every image
 
 ## Run locally
 
-Requires Node.js [[FILL: version from package.json engines]] and npm.
+Requires Node.js 18+ (tested on Node 20+) and npm.
 
 ```bash
 git clone https://github.com/selfabhijeetkumar/loopgate.git

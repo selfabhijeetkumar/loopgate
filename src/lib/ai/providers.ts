@@ -43,37 +43,78 @@ export function resetProviderCooldowns(): void {
   providerCooldowns.clear();
 }
 
+import { formatRouteLabel } from './explainTemplates';
+
+function mapProfileLabel(p: string): string {
+  switch (p) {
+    case 'household':
+      return 'Household resident';
+    case 'hostel':
+      return 'Campus hostel resident';
+    case 'facility_operator':
+      return 'Facility operator';
+    default:
+      return p;
+  }
+}
+
+function mapClassLabel(c: string): string {
+  switch (c) {
+    case 'hazardous':
+      return 'Hazardous material';
+    case 'recyclable':
+      return 'Recyclable material';
+    case 'reusable':
+      return 'Reusable material';
+    case 'biodegradable':
+      return 'Biodegradable material';
+    default:
+      return c;
+  }
+}
+
 /**
  * Builds the prompt instructions strictly bounding the model to engine data.
+ * All route names and keys are human-readable, with zero programming identifiers.
  */
 function buildPrompt(input: EngineExplanationInput): string {
   const { item, decision, profile } = input;
-  return `You are Loopgate's automated waste sorting explanation assistant.
-Provide a concise, 2-to-3 sentence explanation of the sorting gate decision for the given item.
+  const hazPct = Number((item.hazardProbability * 100).toFixed(1));
+  const confPct = Number((item.confidence * 100).toFixed(1));
+  const gateScoreVal = Number(decision.gateScore.toFixed(3));
+  const threshVal = Number(decision.threshold.toFixed(2));
+  const routeName = formatRouteLabel(decision.route);
 
-STRICT ACCURACY RULES:
-1. ONLY quote or mention numbers present in the input JSON below. NEVER invent or hallucinate any number, percentage, or currency figure.
-2. Adopt a tone suited to the requested user profile: "${profile}".
-   - "household": clear, home waste segregation instructions, safety notes.
-   - "hostel": common-area campus hostel bins, electronic drop stations.
-   - "facility_operator": technical gate telemetry, diverter state, compactor protection.
-3. Use "in this simulated scenario" phrasing. Never claim 100% fire prevention or real hardware measurements.
-4. Output PLAIN TEXT ONLY. No markdown headers, no HTML tags, no emojis.
+  return `You are Loopgate's explanatory assistant for simulated materials recovery.
+Explain the automated routing decision for the item in exactly 2 to 3 plain sentences.
+
+CRITICAL POLICY & LANGUAGE RULES:
+1. Always begin or frame with "In this simulated scenario". Never claim real-world physical outcomes, fire prevention, or warranties.
+2. FORBIDDEN WORDS: NEVER use the words "prevent", "prevents", "fire risk", "guarantee".
+3. NO PROGRAMMING IDENTIFIERS: NEVER use camelCase words, snake_case words, code variables, or raw field names (for example, never write gateScore, hazard_hold, hazardPercentage, primaryClass, etc.). Use human terms only: "Hazard hold", "Inspection bay", "Recyclable bin", "Reusable bin", "Biodegradable bin".
+4. ACCURATE POLICY EXPLANATION:
+   - The safety floor is a hard limit comparing the item's estimated hazard probability with 0.30.
+   - The gate score is a separate value compared with the inspection threshold.
+   - NEVER compare gate score with the safety floor, and never say gate score triggered the safety floor.
+5. NUMBERS: Quote ONLY the exact numbers provided in the input data below (or their exact decimal equivalents). Never invent or hallucinate any numbers.
+6. PROFILE-SPECIFIC ADVICE:
+   - Household: guidance for home segregation and local e-waste drop-off.
+   - Campus Hostel: guidance for hostel floor sorting and campus reception drop-off.
+   - Facility Operator: operational state of the diverter and stream management.
+7. Return PLAIN TEXT only. Exactly 2 to 3 plain sentences.
 
 INPUT DATA:
 ${JSON.stringify({
-  itemId: item.id,
-  itemName: item.name,
-  primaryClass: item.primaryClass,
-  hazardProbability: Number(item.hazardProbability.toFixed(3)),
-  hazardPercentage: Number((item.hazardProbability * 100).toFixed(1)),
-  confidence: Number(item.confidence.toFixed(3)),
-  confidencePercentage: Number((item.confidence * 100).toFixed(1)),
-  gateScore: Number(decision.gateScore.toFixed(3)),
-  gateThreshold: Number(decision.threshold.toFixed(2)),
-  assignedRoute: decision.route,
-  safetyFloorTriggered: decision.floorTriggered,
-  profile,
+  "Item": item.name,
+  "Material Class": mapClassLabel(item.primaryClass),
+  "Estimated Hazard Probability": hazPct,
+  "Detector Confidence": confPct,
+  "Gate Score": gateScoreVal,
+  "Inspection Threshold": threshVal,
+  "Safety Floor Limit": 0.30,
+  "Safety Floor Activated": decision.floorTriggered ? "Yes" : "No",
+  "Assigned Route": routeName,
+  "Target Profile": mapProfileLabel(profile),
 }, null, 2)}`;
 }
 

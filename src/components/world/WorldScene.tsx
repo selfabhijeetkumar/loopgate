@@ -915,7 +915,9 @@ export const WorldScene = forwardRef<WorldSceneHandle, WorldSceneProps>(function
       const isBehind = projVec.z > 1.0;
       const x = (projVec.x * 0.5 + 0.5) * size.width;
       const y = (-(projVec.y * 0.5) + 0.5) * size.height;
-      const opacity = chapter === ch ? 1.0 : 0.0;
+      // ONLY show station badges during 3D tour chapters 0 to 3.
+      // Chapters 4, 5, and below have their own dedicated UI panels (Replay, Evidence, Streams, etc.)
+      const opacity = chapter === ch && chapter < 4 ? 1.0 : 0.0;
       overlayRef.current?.updateStation(idx, x, y, opacity, isBehind);
     });
 

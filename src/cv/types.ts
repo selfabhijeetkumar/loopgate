@@ -31,6 +31,7 @@ export interface NormalizedDetection {
     batteryRisk: number;
   };
   cropDataUrl?: string;
+  classificationError?: string;
   provenance: Provenance;
 }
 

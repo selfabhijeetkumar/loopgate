@@ -219,7 +219,9 @@ export function mapDetectionToItem(
     assignedRoute: decision.route,
     provenance,
     createdAt: new Date().toISOString(),
-    notes: detection.cropDataUrl || undefined,
+    notes: detection.classificationError
+      ? `Classification error: ${detection.classificationError}`
+      : detection.cropDataUrl || undefined,
   };
 
   return initialItem;

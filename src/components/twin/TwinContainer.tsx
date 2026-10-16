@@ -633,7 +633,7 @@ export function TwinContainer({ className = '' }: TwinContainerProps) {
                 <div
                   id="override-refusal-alert"
                   role="alert"
-                  className="bg-red-950/40 border border-red-500/60 p-2.5 text-[11px] text-red-300 rounded-[2px]"
+                  className="bg-amber-950/40 border border-amber-500/60 p-2.5 text-[11px] text-amber-300 rounded-[2px]"
                 >
                   {overrideErrorMessage}
                 </div>

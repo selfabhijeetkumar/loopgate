@@ -42,7 +42,7 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] font-mono">
             <div className="flex items-center gap-2.5 text-amber-400">
               <span className="w-1.5 h-1.5 bg-amber-500 rounded-none animate-pulse flex-shrink-0" />
-              <span className="uppercase tracking-wider font-bold">DSU Code Clash 2.0 — PS06 Submission</span>
+              <span className="uppercase tracking-wider font-bold">DSU Code Clash 2.0 // PS06 Submission</span>
               <span className="text-text-muted hidden sm:inline">|</span>
               <span className="text-text-muted hidden sm:inline">Simulation runs without model download. CV activates via Evidence Lab upload.</span>
             </div>

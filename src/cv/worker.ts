@@ -18,6 +18,7 @@
 import { pipeline, env, RawImage } from '@huggingface/transformers';
 import type { RawDetectorResult, NormalizedDetection } from './types';
 import { nonMaxSuppression } from './nms';
+import { cropWithOffscreenCanvasOrBuffer } from './crop';
 
 // ---------------------------------------------------------------------------
 // 1. Diagnostics & CSP / Fetch Monitoring
@@ -401,26 +402,39 @@ async function analyze(
       const normW = Math.max(0.01, Math.min(1 - normX, (xmax - xmin) / imageWidth));
       const normH = Math.max(0.01, Math.min(1 - normY, (ymax - ymin) / imageHeight));
 
-      let clipProbs = {
-        recyclable: 0.25,
-        reusable: 0.25,
-        biodegradable: 0.25,
-        hazardous: 0.25,
-        batteryRisk: 0.0,
-      };
-
-      let cropDataUrl: string | undefined = undefined;
+      let clipProbs: {
+        recyclable: number;
+        reusable: number;
+        biodegradable: number;
+        hazardous: number;
+        batteryRisk: number;
+      } | undefined = undefined;
+      let classificationError: string | undefined = undefined;
 
       try {
-        const cropped = await rawImage.crop([
-          Math.max(0, Math.round(xmin)),
-          Math.max(0, Math.round(ymin)),
-          Math.min(imageWidth, Math.round(xmax)),
-          Math.min(imageHeight, Math.round(ymax)),
-        ]);
+        const cropBox = {
+          xmin: Math.max(0, Math.round(xmin)),
+          ymin: Math.max(0, Math.round(ymin)),
+          xmax: Math.min(imageWidth - 1, Math.round(xmax)),
+          ymax: Math.min(imageHeight - 1, Math.round(ymax)),
+        };
 
-        cropDataUrl = cropped.toDataURL();
-        const clipOutput = await classifierPipeline(cropped, CLIP_PROMPTS);
+        const croppedBuffer = cropWithOffscreenCanvasOrBuffer(
+          rawImage.data,
+          imageWidth,
+          imageHeight,
+          cropBox,
+          rawImage.channels
+        );
+
+        const croppedRawImage = new RawImage(
+          croppedBuffer.data,
+          croppedBuffer.width,
+          croppedBuffer.height,
+          croppedBuffer.channels as 1 | 2 | 3 | 4
+        );
+
+        const clipOutput = await classifierPipeline(croppedRawImage, CLIP_PROMPTS);
 
         if (Array.isArray(clipOutput)) {
           const findScore = (match: string) => {
@@ -443,8 +457,9 @@ async function analyze(
             batteryRisk: Number(batScore.toFixed(4)),
           };
         }
-      } catch (cropErr) {
-        console.warn('Crop/classify error for box:', cropErr);
+      } catch (cropErr: any) {
+        console.warn(`[Worker] Crop/classify error for box ${i + 1}:`, cropErr);
+        classificationError = cropErr?.message || String(cropErr);
       }
 
       results.push({
@@ -458,7 +473,7 @@ async function analyze(
           height: normH,
         },
         clipProbabilities: clipProbs,
-        cropDataUrl,
+        classificationError,
         provenance: 'Model-inferred',
       });
     }

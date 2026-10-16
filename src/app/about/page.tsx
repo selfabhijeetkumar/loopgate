@@ -72,7 +72,7 @@ export default function AboutPage() {
             Loopgate models a middle path: an uncertainty gate that routes items whose hazard
             probability exceeds a configurable safety floor to a human-review lane, while letting
             clearly safe items pass to compaction. The gate score is a weighted combination of
-            hazard probability and model uncertainty — neither metric alone.
+            hazard probability and model uncertainty, neither metric alone.
           </p>
         </section>
 

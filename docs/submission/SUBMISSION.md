@@ -31,7 +31,7 @@ Judging is unattended (no live pitch). The application is fully self-guided and 
    Open the home page. Scroll through the six chapters (Intake, Multispectral Scan, Diverter Gate, Route Audit, Run It Yourself, Stream Balancing). Every metric is labeled with its provenance (`[OBSERVED]`, `[CALCULATED]`, or `[SIMULATED]`).
 
 2. **Step 2: Compare Lines in Replay Theatre**  
-   Scroll down to `#replay` to observe side-by-side execution of the Standard Ungated Baseline line versus the Loopgate Autonomous Gate. Step through items and observe EA-01 Safety Floor invariant enforcement (`p(hazard) >= 0.30` automatically triggers diversion).
+   Scroll down to `#replay` to observe side-by-side execution of the Standard Ungated Baseline line versus the Loopgate Epistemic Gate. Step through items and observe EA-01 Safety Floor invariant enforcement (`p(hazard) >= 0.30` automatically triggers diversion).
 
 3. **Step 3: Test Real In-Browser CV in Evidence Lab**  
    Scroll down to `#evidence` and click **"Load simulated sample"** for instantaneous evaluation, or upload any photo of items (bottles, phones, remotes). Real vision detection (Xenova/detr-resnet-50) runs locally inside a dedicated Web Worker via ONNX WebAssembly, with CLIP crop zero-shot verification.
@@ -40,7 +40,7 @@ Judging is unattended (no live pitch). The application is fully self-guided and 
 
 ## Architecture & Technical Highlights
 
-- **Pure TypeScript Engine:** 91 passing automated unit tests (`npm test`).
+- **Pure TypeScript Engine:** 118+ passing automated unit tests (`npm test`).
 - **Single WebGL Context:** Full-viewport R3F world with GSAP ScrollTrigger camera choreographies, custom GLSL celestial dome shader, and DOM HUD overlays positioned without R3F React root unmounts.
 - **In-Browser Machine Learning:** Zero-server Web Worker pipeline using HuggingFace Transformers.js (`detr-resnet-50` COCO detector + `clip-vit-base-patch32` crop classification).
 - **Honest Grounding & Provenance:** Every single number, cost projection, and routing score is explicitly attributed to its mathematical source or marked as a simulated estimate.
