@@ -169,13 +169,43 @@ export default function AboutPage() {
 
         {/* Team */}
         <section className="mb-10" aria-labelledby="team-heading">
-          <h2 id="team-heading" className="text-xl font-display font-bold text-text-primary mb-4">
-            Built By
+          <h2 id="team-heading" className="text-xl font-display font-bold text-text-primary mb-2">
+            Team NEXARC
           </h2>
+          <div className="text-xs font-mono text-amber-400 mb-4">
+            Dayananda Sagar University, Bengaluru &bull; DSU Code Clash 2.0 &bull; Problem Statement 06
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div className="border border-border-subtle bg-bg-surface/50 p-4 rounded-[2px]">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-base font-bold text-text-primary">Abhijeet Kumar</span>
+                <span className="text-xs font-mono text-amber-400 uppercase font-bold">Team lead</span>
+              </div>
+              <p className="text-xs text-text-secondary font-sans leading-relaxed">
+                Concept and system design, engineering direction, integration, testing and deployment. Built the application with AI-assisted development tools (Antigravity).
+              </p>
+            </div>
+
+            <div className="border border-border-subtle bg-bg-surface/50 p-4 rounded-[2px]">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-base font-bold text-text-primary">Vaishnavi Isrannanvar</span>
+                <span className="text-xs font-mono text-text-muted uppercase">Team member</span>
+              </div>
+              <ul className="text-xs text-text-secondary font-sans space-y-1 list-disc list-inside leading-relaxed mt-2">
+                <li>Quality testing: tested the deployed app on her own devices and reported bugs.</li>
+                <li>Eval photo set: took the object photos used in public/eval/ with her own phone.</li>
+                <li>Content review: reviewed the FAQ, README and presentation for clarity and mistakes.</li>
+                <li>Demo video: contributed to the demo video.</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3 className="text-sm font-mono uppercase tracking-wider text-amber-400 font-bold mb-2">
+            How this project was built
+          </h3>
           <p className="text-sm text-text-secondary font-sans leading-relaxed">
-            Loopgate was designed and built by Abhijeet Kumar for DSU Code Clash 2.0,
-            a 24-hour hackathon held at DSU, Problem Statement 06: autonomous waste sorting and
-            uncertainty gating for materials recovery.
+            The concept, design and engineering decisions were made by the team lead, the code was produced with AI-assisted development tools under his direction, and every number in the app comes from the deterministic engine or is labelled Simulated.
           </p>
         </section>
 

@@ -1,23 +1,25 @@
 # SUBMISSION.md — DSU Code Clash 2.0 (Problem Statement 06)
 
-**Project:** Loopgate — Autonomous Uncertainty Gating for High-Speed Materials Recovery  
+**Project:** Loopgate — Uncertainty-Gated Waste Routing (Simulated Digital Twin)  
 **Problem Statement:** PS06  
 **Competition:** DSU Code Clash 2.0  
+**Team Name:** NEXARC  
+**College:** Dayananda Sagar University, Bengaluru  
 
 ---
 
 ## Submission Details
 
-> **Note for Judge / Reviewer:** The fields below are populated by the submitter for evaluation.
+> **Note for Judge / Reviewer:** The fields below contain verified team and submission information.
 
 | Field | Value |
 |---|---|
-| **Live Demo URL** |  |
-| **Demo Video URL** |  |
-| **PPT File Name** |  |
-| **GitHub Repository URL** |  |
-| **Team Members and Roles** |  |
-| **Contact Email** |  |
+| **Live Demo URL** | https://loopgate.vercel.app *(deployed separately)* |
+| **Demo Video URL** | *(included in submission package)* |
+| **PPT File Name** | *(included in submission package)* |
+| **GitHub Repository URL** | https://github.com/selfabhijeetkumar/loopgate |
+| **Team Members and Roles** | **Abhijeet Kumar** (Team lead: Concept & system design, engineering direction, integration, testing & deployment. Built with AI-assisted development tools);<br>**Vaishnavi Isrannanvar** (Team member: Quality testing on own devices, eval photo set with own phone, content review of FAQ/README/PPT, demo video contribution) |
+| **Contact Email** | selfabhijeetkumar@gmail.com |
 
 ---
 

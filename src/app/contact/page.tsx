@@ -43,12 +43,18 @@ export default function ContactPage() {
         <div className="space-y-4 mb-10">
           <div className="border border-border-subtle bg-bg-surface/50 p-5 rounded-[2px]">
             <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-2">
-              Project Author
+              Team Contact &bull; NEXARC
             </div>
-            <div className="text-base font-bold text-text-primary">Abhijeet Kumar</div>
-            <div className="text-xs text-text-secondary font-mono mt-1">
-              DSU Code Clash 2.0 — PS06 Submission
+            <div className="text-base font-bold text-text-primary">Abhijeet Kumar (Team Lead)</div>
+            <div className="text-xs text-text-secondary font-mono mt-1 mb-3">
+              Dayananda Sagar University, Bengaluru &bull; DSU Code Clash 2.0 (PS06)
             </div>
+            <a
+              href="mailto:selfabhijeetkumar@gmail.com"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-300 font-mono text-xs rounded-[2px] transition-colors"
+            >
+              <span>selfabhijeetkumar@gmail.com</span>
+            </a>
           </div>
 
           <div className="border border-border-subtle bg-bg-surface/50 p-5 rounded-[2px]">

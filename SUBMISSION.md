@@ -1,9 +1,14 @@
 # SUBMISSION.md — DSU Code Clash 2.0 (PS06)
 
-**Project:** Loopgate — Autonomous Uncertainty Gating for High-Speed Materials Recovery  
+**Project:** Loopgate — Uncertainty-Gated Waste Routing (Simulated Digital Twin)  
 **Problem Statement:** PS06  
 **Competition:** DSU Code Clash 2.0  
-**Author:** Abhijeet Kumar
+**Team Name:** NEXARC  
+**College:** Dayananda Sagar University, Bengaluru  
+**Team Members:**  
+- **Abhijeet Kumar** (Team lead): Concept and system design, engineering direction, integration, testing and deployment. Built the application with AI-assisted development tools (Antigravity).  
+- **Vaishnavi Isrannanvar** (Team member): Quality testing on own devices, eval photo set with own phone, content review of FAQ/README/PPT, demo video contribution.  
+**Contact Email:** selfabhijeetkumar@gmail.com
 
 ---
 
